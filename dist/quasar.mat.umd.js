@@ -1354,7 +1354,9 @@ var QInputFrame = {render: function(){var _vm=this;var _h=_vm.$createElement;var
       field: {}
     }
   },
-  inject: ['__field'],
+  inject: {
+    __field: { default: null }
+  },
   computed: {
     label: function label () {
       return this.stackLabel || this.floatLabel
@@ -6204,7 +6206,9 @@ var QOptionGroup = {render: function(){var _vm=this;var _h=_vm.$createElement;va
     inline: Boolean,
     disable: Boolean
   },
-  inject: ['__field'],
+  inject: {
+    __field: { default: null }
+  },
   computed: {
     component: function component () {
       return ("q-" + (this.type))
