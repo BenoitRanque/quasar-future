@@ -12129,7 +12129,8 @@ var QUploader = {render: function(){var _vm=this;var _h=_vm.$createElement;var _
     QItem: QItem,
     QItemSide: QItemSide,
     QItemMain: QItemMain,
-    QItemTile: QItemTile
+    QItemTile: QItemTile,
+    QSlideTransition: QSlideTransition
   },
   props: {
     name: {
