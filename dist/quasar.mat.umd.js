@@ -5327,6 +5327,7 @@ var TableHeader = {
             props: {
               color: this.color,
               value: this.allRowsSelected,
+              dark: this.dark,
               indeterminate: this.someRowsSelected
             },
             on: {
@@ -5334,9 +5335,11 @@ var TableHeader = {
                 if (this$1.someRowsSelected) {
                   val = false;
                 }
-                this$1.computedRows.forEach(function (row) {
-                  this$1.$set(this$1.multipleSelected, row[this$1.rowKey], val);
-                });
+                this$1.__updateSelection(
+                  this$1.computedRows.map(function (row) { return row[this$1.rowKey]; }),
+                  this$1.computedRows,
+                  val
+                );
               }
             }
           })
@@ -5355,9 +5358,11 @@ var TableHeader = {
             if (this$1.someRowsSelected) {
               val = false;
             }
-            this$1.computedRows.forEach(function (row) {
-              this$1.$set(this$1.multipleSelected, row[this$1.rowKey], val);
-            });
+            this$1.__updateSelection(
+              this$1.computedRows.map(function (row) { return row[this$1.rowKey]; }),
+              this$1.computedRows,
+              val
+            );
           }
         });
         data.partialSelected = this.someRowsSelected;
@@ -5416,19 +5421,13 @@ var TableBody = {
             child.unshift(h('td', { staticClass: 'q-table-select' }, [
               h(QCheckbox, {
                 props: {
-                  value: this$1.multipleSelection
-                    ? this$1.multipleSelected[key] === true
-                    : this$1.singleSelected === key,
-                  color: this$1.color
+                  value: selected,
+                  color: this$1.color,
+                  dark: this$1.dark
                 },
                 on: {
-                  input: function (val) {
-                    if (this$1.multipleSelection) {
-                      this$1.$set(this$1.multipleSelected, key, val);
-                    }
-                    else {
-                      this$1.singleSelected = val ? key : null;
-                    }
+                  input: function (adding) {
+                    this$1.__updateSelection([key], [row], adding);
                   }
                 }
               })
@@ -5454,13 +5453,8 @@ var TableBody = {
       if (this.selection) {
         Object.defineProperty(data, 'selected', {
           get: function () { return this$1.isRowSelected(data.key); },
-          set: function (val) {
-            if (this$1.multipleSelection) {
-              this$1.$set(this$1.multipleSelected, data.key, val);
-            }
-            else {
-              this$1.singleSelected = val ? data.key : null;
-            }
+          set: function (adding) {
+            this$1.__updateSelection([data.key], [data.row], adding);
           }
         });
       }
@@ -7266,52 +7260,65 @@ var RowSelection = {
     selection: {
       type: String,
       validator: function (v) { return ['single', 'multiple'].includes(v); }
-    }
-  },
-  data: function data () {
-    return {
-      multipleSelected: {},
-      singleSelected: null
+    },
+    selected: {
+      type: Array,
+      default: function () { return []; }
     }
   },
   computed: {
+    selectedKeys: function selectedKeys () {
+      var this$1 = this;
+
+      var keys = {};
+      this.selected.map(function (row) { return row[this$1.rowKey]; }).forEach(function (key) {
+        keys[key] = true;
+      });
+      return keys
+    },
     singleSelection: function singleSelection () {
       return this.selection === 'single'
     },
     multipleSelection: function multipleSelection () {
       return this.selection === 'multiple'
     },
-    someRowsSelected: function someRowsSelected () {
-      var this$1 = this;
-
-      if (this.multipleSelection) {
-        return !this.allRowsSelected && this.computedRows.some(function (row) { return this$1.multipleSelected[row[this$1.rowKey]] === true; })
-      }
-    },
     allRowsSelected: function allRowsSelected () {
       var this$1 = this;
 
       if (this.multipleSelection) {
-        return this.computedRows.length > 0 && this.computedRows.every(function (row) { return this$1.multipleSelected[row[this$1.rowKey]] === true; })
+        return this.computedRows.length > 0 && this.computedRows.every(function (row) { return this$1.selectedKeys[row[this$1.rowKey]] === true; })
+      }
+    },
+    someRowsSelected: function someRowsSelected () {
+      var this$1 = this;
+
+      if (this.multipleSelection) {
+        return !this.allRowsSelected && this.computedRows.some(function (row) { return this$1.selectedKeys[row[this$1.rowKey]] === true; })
       }
     },
     rowsSelectedNumber: function rowsSelectedNumber () {
-      var this$1 = this;
-
-      return this.multipleSelection
-        ? Object.keys(this.multipleSelected).filter(function (key) { return this$1.multipleSelected[key] === true; }).length
-        : (this.singleSelected !== null ? 1 : 0)
+      return this.selected.length
     }
   },
   methods: {
     isRowSelected: function isRowSelected (key) {
-      return this.multipleSelection
-        ? this.multipleSelected[key] === true
-        : this.singleSelected === key
+      return this.selectedKeys[key] === true
     },
     clearSelection: function clearSelection () {
-      this.multipleSelected = {};
-      this.singleSelected = null;
+      this.$emit('update:selected', []);
+    },
+    __updateSelection: function __updateSelection (keys, rows, adding) {
+      var this$1 = this;
+
+      if (this.singleSelection) {
+        this.$emit('update:selected', adding ? rows : []);
+      }
+      else {
+        this.$emit('update:selected', adding
+          ? this.selected.concat(rows)
+          : this.selected.filter(function (row) { return !keys.includes(row[this$1.rowKey]); })
+        );
+      }
     }
   }
 };
