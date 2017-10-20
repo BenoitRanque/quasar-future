@@ -440,6 +440,7 @@ var install = function (_Vue, opts) {
 
   setVue(_Vue);
   ready(function () {
+    document.body.classList.add('test');
     var cls = [
       "mat",
       Platform.is.desktop ? 'desktop' : 'mobile',
