@@ -2209,6 +2209,7 @@ body.with-modal {
   overflow-y: auto;
   min-width: 280px;
   max-height: 80vh;
+  -webkit-backface-visibility: hidden;
 }
 .modal-content .layout {
   width: 100%;

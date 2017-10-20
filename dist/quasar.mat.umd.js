@@ -277,10 +277,15 @@ function ready (fn) {
   }
 
   if (document.readyState === 'complete') {
+    console.log('ready immediate', fn);
     return fn()
   }
 
-  document.addEventListener('DOMContentLoaded', fn, false);
+  console.log('ready delayed', fn);
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log('ready delayed --> now triggered');
+    fn();
+  }, false);
 }
 
 var prefix = ['-webkit-', '-moz-', '-ms-', '-o-'];
@@ -480,30 +485,6 @@ var install = function (_Vue, opts) {
     theme: "mat",
     events: events
   };
-};
-
-var start = function (cb) {
-  if ( cb === void 0 ) cb = function () {};
-
-  /*
-    if on Cordova, but not on an iframe,
-    like on Quasar Play app
-   */
-  if (!Platform.is.cordova || Platform.within.iframe) {
-    cb();
-    return
-  }
-
-  var tag = document.createElement('script');
-
-  document.addEventListener('deviceready', function () {
-    Vue$1.prototype.$cordova = cordova;
-    cb();
-  }, false);
-
-  tag.type = 'text/javascript';
-  document.body.appendChild(tag);
-  tag.src = 'cordova.js';
 };
 
 var units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'];
@@ -863,7 +844,10 @@ var QAlert = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_
     QTransition: QTransition
   },
   props: {
-    value: Boolean,
+    value: {
+      type: Boolean,
+      default: true
+    },
     duration: Number,
     name: String,
     enter: String,
@@ -888,7 +872,7 @@ var QAlert = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_
   },
   data: function data () {
     return {
-      active: true
+      active: this.value
     }
   },
   watch: {
@@ -2271,7 +2255,7 @@ var ModelToggleMixin = {
   }
 };
 
-var QPopover = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-popover animate-scale",style:(_vm.transformCSS),on:{"click":function($event){$event.stopPropagation();}}},[_vm._t("default")],2)},staticRenderFns: [],
+var QPopover = {
   name: 'q-popover',
   mixins: [ModelToggleMixin],
   props: {
@@ -2319,6 +2303,15 @@ var QPopover = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
       return parsePosition(this.self)
     }
   },
+  render: function render (h) {
+    return h('div', {
+      staticClass: 'q-popover animate-scale',
+      style: this.transformCSS,
+      on: {
+        click: function click (e) { e.stopPropagation(); }
+      }
+    }, this.$slots.default)
+  },
   created: function created () {
     var this$1 = this;
 
@@ -2346,12 +2339,12 @@ var QPopover = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
     this.close();
   },
   methods: {
-    toggle: function toggle (event) {
+    toggle: function toggle (evt) {
       if (this.opened) {
         this.close();
       }
       else {
-        this.open(event);
+        this.open(evt);
       }
     },
     open: function open (evt) {
@@ -2879,11 +2872,12 @@ function prevent (e) {
   e.stopPropagation();
 }
 
-var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-popover',{ref:"popover",attrs:{"fit":"","offset":[0, 10],"anchor-click":false},on:{"close":function($event){_vm.$emit('close');},"open":function($event){_vm.$emit('open');}}},[_c('div',{staticClass:"list no-border",class:{separator: _vm.separator},style:(_vm.computedWidth)},_vm._l((_vm.computedResults),function(result,index){return _c('q-item-wrapper',{key:result.id || JSON.stringify(result),class:{active: _vm.selectedIndex === index},attrs:{"cfg":result,"link":""},on:{"click":function($event){_vm.setValue(result);}}})}))])},staticRenderFns: [],
+var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-popover',{ref:"popover",attrs:{"fit":"","offset":[0, 10],"anchor-click":false},on:{"close":function($event){_vm.$emit('close');},"open":function($event){_vm.$emit('open');}}},[_c('q-list',{style:(_vm.computedWidth),attrs:{"no-border":"","link":"","separator":_vm.separator}},_vm._l((_vm.computedResults),function(result,index){return _c('q-item-wrapper',{key:result.id || JSON.stringify(result),class:{active: _vm.selectedIndex === index},attrs:{"cfg":result},on:{"click":function($event){_vm.setValue(result);}}})}))],1)},staticRenderFns: [],
   name: 'q-autocomplete',
   components: {
     QInput: QInput,
     QPopover: QPopover,
+    QList: QList,
     QItemWrapper: QItemWrapper
   },
   props: {
@@ -2906,7 +2900,10 @@ var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;v
     staticData: Object,
     separator: Boolean
   },
-  inject: ['__input', '__inputParent'],
+  inject: {
+    '__input': { default: null },
+    '__inputDebounce': { default: null }
+  },
   data: function data () {
     return {
       searchId: '',
@@ -2972,13 +2969,13 @@ var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;v
       this.close();
       this.__input.loading = true;
       this.$emit('search', terms, function (results) {
-        if (!results || this$1.searchId !== searchId) {
+        if (this$1.searchId !== searchId) {
           return
         }
 
         this$1.__clearSearch();
 
-        if (this$1.results === results) {
+        if (!this$1.results || this$1.results === results) {
           return
         }
 
@@ -3007,7 +3004,7 @@ var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;v
       this.searchId = '';
     },
     setValue: function setValue (result) {
-      var suffix = this.__inputParent ? 'Parent' : '';
+      var suffix = this.__inputDebounce ? 'Debounce' : '';
       this[("__input" + suffix)].set(this.staticData ? result[this.staticData.field] : result.value);
 
       this.$emit('selected', result);
@@ -3074,8 +3071,8 @@ var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;v
       return
     }
     this.__input.register();
-    if (this.__inputParent) {
-      this.__inputParent.setChildDebounce(true);
+    if (this.__inputDebounce) {
+      this.__inputDebounce.setChildDebounce(true);
     }
     this.$nextTick(function () {
       this$1.inputEl = this$1.__input.getEl();
@@ -3085,8 +3082,8 @@ var QAutocomplete = {render: function(){var _vm=this;var _h=_vm.$createElement;v
   beforeDestroy: function beforeDestroy () {
     this.__clearSearch();
     this.__input.unregister();
-    if (this.__inputParent) {
-      this.__inputParent.setChildDebounce(false);
+    if (this.__inputDebounce) {
+      this.__inputDebounce.setChildDebounce(false);
     }
     if (this.inputEl) {
       this.inputEl.removeEventListener('keydown', this.__handleKeypress);
@@ -3901,7 +3898,7 @@ var easing = Object.freeze({
 
 var ids = {};
 
-function start$1 (ref) {
+function start (ref) {
   var name = ref.name;
   var duration = ref.duration; if ( duration === void 0 ) duration = 300;
   var to = ref.to;
@@ -3966,7 +3963,7 @@ function stop (id) {
 
 
 var animate = Object.freeze({
-	start: start$1,
+	start: start,
 	stop: stop
 });
 
@@ -4192,7 +4189,7 @@ var QCarousel = {render: function(){var _vm=this;var _h=_vm.$createElement;var _
 
       this.animationInProgress = true;
 
-      this.animUid = start$1({
+      this.animUid = start({
         from: this.position,
         to: pos,
         duration: isNumber(this.animation) ? this.animation : 300,
@@ -4624,7 +4621,7 @@ function parseSize (padding) {
 function toggleSlide (el, showing, done) {
   var store = el.__qslidetoggle || {};
   function anim () {
-    store.uid = start$1({
+    store.uid = start({
       to: showing ? 100 : 0,
       from: store.pos !== null ? store.pos : showing ? 0 : 100,
       apply: function apply (pos) {
@@ -4801,13 +4798,27 @@ var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;va
   }
 };
 
-var ContextMenuDesktop = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-popover',{ref:"popover",attrs:{"anchor-click":false},on:{"open":function($event){_vm.$emit('open');},"close":function($event){_vm.$emit('close');}}},[_vm._t("default")],2)},staticRenderFns: [],
+var ContextMenuDesktop = {
   name: 'q-context-menu',
   components: {
     QPopover: QPopover
   },
   props: {
     disable: Boolean
+  },
+  render: function render (h) {
+    var this$1 = this;
+
+    return h(QPopover, {
+      ref: 'popover',
+      props: {
+        anchorClick: false
+      },
+      on: {
+        open: function () { this$1.$emit('open'); },
+        close: function () { this$1.$emit('close'); }
+      }
+    }, this.$slots.default)
   },
   methods: {
     close: function close () {
@@ -4816,7 +4827,7 @@ var ContextMenuDesktop = {render: function(){var _vm=this;var _h=_vm.$createElem
     __open: function __open (evt) {
       var this$1 = this;
 
-      if (this.disable) {
+      if (!evt || this.disable) {
         return
       }
       this.close();
@@ -5096,70 +5107,71 @@ var QModalLayout = {render: function(){var _vm=this;var _h=_vm.$createElement;va
   }
 };
 
-var ContextMenuMobile = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-modal',{ref:"dialog",attrs:{"minimized":""},on:{"open":function($event){_vm.$emit('open');},"close":function($event){_vm.$emit('close');}}},[_vm._t("default")],2)},staticRenderFns: [],
+var ContextMenuMobile = {
   name: 'q-context-menu',
-  components: {
-    QModal: QModal
-  },
   props: {
     disable: Boolean
   },
   methods: {
-    open: function open () {
-      this.handler();
-    },
     close: function close () {
       this.target.classList.remove('non-selectable');
       this.$refs.dialog.close();
     },
-    toggle: function toggle () {
-      if (this.$refs.dialog.active) {
-        this.close();
+    __open: function __open () {
+      if (!this.disable && this.$refs.dialog) {
+        this.$refs.dialog.open();
       }
-      else {
-        this.open();
-      }
+    },
+    __touchStartHandler: function __touchStartHandler (evt) {
+      var this$1 = this;
+
+      this.target.classList.add('non-selectable');
+      this.touchTimer = setTimeout(function () {
+        evt.preventDefault();
+        evt.stopPropagation();
+        setTimeout(function () {
+          this$1.__cleanup();
+          this$1.__open();
+        }, 10);
+      }, 600);
+    },
+    __cleanup: function __cleanup () {
+      this.target.classList.remove('non-selectable');
+      clearTimeout(this.touchTimer);
     }
+  },
+  render: function render (h) {
+    var this$1 = this;
+
+    return h(QModal, {
+      ref: 'dialog',
+      props: {
+        minimized: true
+      },
+      on: {
+        open: function () { this$1.$emit('open'); },
+        close: function () { this$1.$emit('close'); }
+      }
+    }, this.$slots.default)
   },
   mounted: function mounted () {
     var this$1 = this;
 
     this.$nextTick(function () {
       this$1.target = this$1.$el.parentNode;
-
-      this$1.handler = function () {
-        if (!this$1.disable) {
-          this$1.$refs.dialog.open();
-        }
-      };
-
-      this$1.touchStartHandler = function (event) {
-        this$1.target.classList.add('non-selectable');
-        this$1.touchTimer = setTimeout(function () {
-          event.preventDefault();
-          event.stopPropagation();
-          this$1.cleanup();
-          setTimeout(function () {
-            this$1.handler();
-          }, 10);
-        }, 600);
-      };
-      this$1.cleanup = function () {
-        this$1.target.classList.remove('non-selectable');
-        clearTimeout(this$1.touchTimer);
-        this$1.touchTimer = null;
-      };
-      this$1.target.addEventListener('touchstart', this$1.touchStartHandler);
-      this$1.target.addEventListener('touchcancel', this$1.cleanup);
-      this$1.target.addEventListener('touchmove', this$1.cleanup);
-      this$1.target.addEventListener('touchend', this$1.cleanup);
+      this$1.target.addEventListener('touchstart', this$1.__touchStartHandler)
+      ;['touchcancel', 'touchmove', 'touchend'].forEach(function (evt) {
+        this$1.target.addEventListener(evt, this$1.__cleanup);
+      });
     });
   },
   beforeDestroy: function beforeDestroy () {
-    this.target.removeEventListener('touchstart', this.touchStartHandler);
-    this.target.removeEventListener('touchcancel', this.cleanup);
-    this.target.removeEventListener('touchmove', this.cleanup);
-    this.target.removeEventListener('touchend', this.cleanup);
+    var this$1 = this;
+
+    this.target.removeEventListener('touchstart', this.__touchStartHandler)
+    ;['touchcancel', 'touchmove', 'touchend'].forEach(function (evt) {
+      this$1.target.removeEventListener(evt, this$1.__cleanup);
+    });
   }
 };
 
@@ -9980,7 +9992,7 @@ var QSearch = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=
     var this$1 = this;
 
     return {
-      __inputParent: {
+      __inputDebounce: {
         set: function (val) {
           if (this$1.value !== val) {
             this$1.$emit('input', val);
@@ -10646,13 +10658,16 @@ var TabMixin = {
     color: String
   },
   inject: ['data', 'selectTab'],
-  computed: {
-    active: function active () {
-      var sel = this.data.tabName === this.name;
-      if (sel) {
+  watch: {
+    active: function active (val) {
+      if (val) {
         this.$emit('select', this.name);
       }
-      return sel
+    }
+  },
+  computed: {
+    active: function active () {
+      return this.data.tabName === this.name
     },
     classes: function classes () {
       var cls = {
@@ -10746,6 +10761,9 @@ var QRouteTab = {
       this.$nextTick(function () {
         if (this$1.$el.classList.contains('router-link-active') || this$1.$el.classList.contains('router-link-exact-active')) {
           this$1.selectTab(this$1.name);
+        }
+        else if (this$1.active) {
+          this$1.selectTab(null);
         }
       });
     }
@@ -13573,7 +13591,7 @@ var features = Object.freeze({
 	SessionStorage: SessionStorage
 });
 
-var ActionSheets = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-modal',{ref:"dialog",attrs:{"position":"bottom","content-css":_vm.contentCss},on:{"close":function($event){_vm.__dismiss();}}},[(_vm.$q.theme === 'ios')?_vm._m(0):_vm._m(1)])},staticRenderFns: [function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[_c('div',{staticClass:"q-action-sheet"},[(_vm.title)?_c('div',{staticClass:"modal-header",domProps:{"innerHTML":_vm._s(_vm.title)}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"modal-scroll"},[(_vm.gallery)?_c('div',{staticClass:"q-action-sheet-gallery row wrap flex-center"},_vm._l((_vm.actions),function(button,index){return _c('div',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,staticClass:"cursor-pointer relative-position column inline flex-center",class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[(button.icon)?_c('q-icon',{attrs:{"name":button.icon}}):_vm._e(),_vm._v(" "),(button.avatar)?_c('img',{staticClass:"avatar",attrs:{"src":button.avatar}}):_vm._e(),_vm._v(" "),_c('span',[_vm._v(_vm._s(button.label))])],1)})):_c('q-list',{staticClass:"no-border",attrs:{"link":""}},_vm._l((_vm.actions),function(button,index){return _c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[_c('q-item-side',{attrs:{"icon":button.icon,"avatar":button.avatar}}),_vm._v(" "),_c('q-item-main',{attrs:{"inset":"","label":button.label}})],1)}))],1)]),_vm._v(" "),(_vm.dismiss)?_c('div',{staticClass:"q-action-sheet"},[_c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],attrs:{"link":"","tabindex":"0"},on:{"click":function($event){_vm.close();},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close();}}},[_c('q-item-main',[_c('q-item-tile',{staticClass:"text-center",attrs:{"label":""}},[_vm._v(" "+_vm._s(_vm.dismiss.label)+" ")])],1)],1)],1):_vm._e()])},function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',[(_vm.title)?_c('div',{staticClass:"modal-header",domProps:{"innerHTML":_vm._s(_vm.title)}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"modal-scroll"},[(_vm.gallery)?_c('div',{staticClass:"q-action-sheet-gallery row wrap flex-center"},_vm._l((_vm.actions),function(button,index){return _c('div',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,staticClass:"cursor-pointer relative-position column inline flex-center",class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[(button.icon)?_c('q-icon',{attrs:{"name":button.icon}}):_vm._e(),_vm._v(" "),(button.avatar)?_c('img',{staticClass:"avatar",attrs:{"src":button.avatar}}):_vm._e(),_vm._v(" "),_c('span',[_vm._v(_vm._s(button.label))])],1)})):_c('q-list',{staticClass:"no-border",attrs:{"link":""}},_vm._l((_vm.actions),function(button,index){return _c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[_c('q-item-side',{attrs:{"icon":button.icon,"avatar":button.avatar}}),_vm._v(" "),_c('q-item-main',{attrs:{"inset":"","label":button.label}})],1)}))],1)])}],
+var ActionSheets = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-modal',{ref:"dialog",attrs:{"position":"bottom","content-css":_vm.contentCss},on:{"close":function($event){_vm.__dismiss();}}},[(_vm.$q.theme === 'ios')?_c('div',[_c('div',{staticClass:"q-action-sheet"},[(_vm.title)?_c('div',{staticClass:"modal-header",domProps:{"innerHTML":_vm._s(_vm.title)}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"modal-scroll"},[(_vm.gallery)?_c('div',{staticClass:"q-action-sheet-gallery row wrap flex-center"},_vm._l((_vm.actions),function(button,index){return _c('div',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,staticClass:"cursor-pointer relative-position column inline flex-center",class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[(button.icon)?_c('q-icon',{attrs:{"name":button.icon}}):_vm._e(),_vm._v(" "),(button.avatar)?_c('img',{staticClass:"avatar",attrs:{"src":button.avatar}}):_vm._e(),_vm._v(" "),_c('span',[_vm._v(_vm._s(button.label))])],1)})):_c('q-list',{staticClass:"no-border",attrs:{"link":""}},_vm._l((_vm.actions),function(button,index){return _c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[_c('q-item-side',{attrs:{"icon":button.icon,"avatar":button.avatar}}),_vm._v(" "),_c('q-item-main',{attrs:{"inset":"","label":button.label}})],1)}))],1)]),_vm._v(" "),(_vm.dismiss)?_c('div',{staticClass:"q-action-sheet"},[_c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],attrs:{"link":"","tabindex":"0"},on:{"click":function($event){_vm.close();},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close();}}},[_c('q-item-main',[_c('q-item-tile',{staticClass:"text-center",attrs:{"label":""}},[_vm._v(" "+_vm._s(_vm.dismiss.label)+" ")])],1)],1)],1):_vm._e()]):_c('div',[(_vm.title)?_c('div',{staticClass:"modal-header",domProps:{"innerHTML":_vm._s(_vm.title)}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"modal-scroll"},[(_vm.gallery)?_c('div',{staticClass:"q-action-sheet-gallery row wrap flex-center"},_vm._l((_vm.actions),function(button,index){return _c('div',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,staticClass:"cursor-pointer relative-position column inline flex-center",class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[(button.icon)?_c('q-icon',{attrs:{"name":button.icon}}):_vm._e(),_vm._v(" "),(button.avatar)?_c('img',{staticClass:"avatar",attrs:{"src":button.avatar}}):_vm._e(),_vm._v(" "),_c('span',[_vm._v(_vm._s(button.label))])],1)})):_c('q-list',{staticClass:"no-border",attrs:{"link":""}},_vm._l((_vm.actions),function(button,index){return _c('q-item',{directives:[{name:"ripple",rawName:"v-ripple.mat",modifiers:{"mat":true}}],key:index,class:button.classes,attrs:{"tabindex":"0"},on:{"click":function($event){_vm.close(button.handler);},"keydown":function($event){if(!('button' in $event)&&_vm._k($event.keyCode,"enter",13,$event.key)){ return null; }_vm.close(button.handler);}}},[_c('q-item-side',{attrs:{"icon":button.icon,"avatar":button.avatar}}),_vm._v(" "),_c('q-item-main',{attrs:{"inset":"","label":button.label}})],1)}))],1)])])},staticRenderFns: [],
   name: 'q-action-sheet',
   components: {
     QModal: QModal,
@@ -13597,9 +13615,6 @@ var ActionSheets = {render: function(){var _vm=this;var _h=_vm.$createElement;va
     dismiss: Object
   },
   computed: {
-    opened: function opened () {
-      return this.$refs.dialog.active
-    },
     contentCss: function contentCss () {
       if (this.$q.theme === 'ios') {
         return {backgroundColor: 'transparent'}
@@ -13608,7 +13623,7 @@ var ActionSheets = {render: function(){var _vm=this;var _h=_vm.$createElement;va
   },
   methods: {
     close: function close (fn) {
-      if (!this.opened) {
+      if (!this.$refs.dialog.active) {
         return
       }
       var hasFn = typeof fn === 'function';
@@ -13720,12 +13735,17 @@ function show (ref) {
   var spinnerColor = ref.spinnerColor; if ( spinnerColor === void 0 ) spinnerColor = 'white';
   var messageColor = ref.messageColor; if ( messageColor === void 0 ) messageColor = 'white';
   var spinner = ref.spinner; if ( spinner === void 0 ) spinner = QSpinner;
+  var customClass = ref.customClass; if ( customClass === void 0 ) customClass = false;
 
   props.spinner = spinner;
   props.message = message;
   props.spinnerSize = spinnerSize;
   props.spinnerColor = spinnerColor;
   props.messageColor = messageColor;
+
+  if (customClass && typeof customClass === 'string') {
+    props.customClass = " " + (customClass.trim());
+  }
 
   if (appIsInProgress) {
     vm && vm.$forceUpdate();
@@ -13760,7 +13780,7 @@ function show (ref) {
           }));
         }
 
-        return h('div', {staticClass: staticClass}, child)
+        return h('div', {staticClass: staticClass + props.customClass}, child)
       }
     });
   }, delay);
@@ -14071,7 +14091,6 @@ Vue.use({ install: install }, {
 
 var index_umd = {
   version: version,
-  start: start,
   theme: "mat",
 
   components: components,
