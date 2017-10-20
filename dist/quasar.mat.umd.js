@@ -430,8 +430,9 @@ function addBodyClasses () {
 
   Platform.within.iframe && cls.push('within-iframe');
   Platform.is.cordova && cls.push('cordova');
-  Platform.is.electron && cls.push('electron')
+  Platform.is.electron && cls.push('electron');
 
+  console.log('adding body classes', cls)
   (ref = document.body.classList).add.apply(ref, cls);
   var ref;
 }
