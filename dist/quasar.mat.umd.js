@@ -458,7 +458,9 @@ var install = function (_Vue, opts) {
   this.installed = true;
 
   setVue(_Vue);
-  ready(addBodyClasses);
+  ready(function () {
+    addBodyClasses();
+  });
   captureErrors();
 
   if (opts.directives) {
