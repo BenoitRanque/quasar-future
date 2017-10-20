@@ -420,34 +420,23 @@ if (!Array.prototype.find) {
   });
 }
 
+/*
 function addBodyClasses () {
-  var cls = [
+  const cls = [
     "ios",
     Platform.is.desktop ? 'desktop' : 'mobile',
     Platform.has.touch ? 'touch' : 'no-touch',
-    ("platform-" + (Platform.is.ios ? 'ios' : 'mat'))
-  ];
+    `platform-${Platform.is.ios ? 'ios' : 'mat'}`
+  ]
 
-  Platform.within.iframe && cls.push('within-iframe');
-  Platform.is.cordova && cls.push('cordova');
-  Platform.is.electron && cls.push('electron');
+  Platform.within.iframe && cls.push('within-iframe')
+  Platform.is.cordova && cls.push('cordova')
+  Platform.is.electron && cls.push('electron')
 
   console.log('adding body classes', cls)
-  (ref = document.body.classList).add.apply(ref, cls);
-  var ref;
+  document.body.classList.add(...cls)
 }
-
-function captureErrors () {
-  window.onerror = function (message, source, lineno, colno, error) {
-    Events.$emit('app:error', {
-      message: message,
-      source: source,
-      lineno: lineno,
-      colno: colno,
-      error: error
-    });
-  };
-}
+*/
 
 var install = function (_Vue, opts) {
   if ( opts === void 0 ) opts = {};
@@ -459,9 +448,21 @@ var install = function (_Vue, opts) {
 
   setVue(_Vue);
   ready(function () {
-    addBodyClasses();
+    var cls = [
+      "ios",
+      Platform.is.desktop ? 'desktop' : 'mobile',
+      Platform.has.touch ? 'touch' : 'no-touch',
+      ("platform-" + (Platform.is.ios ? 'ios' : 'mat'))
+    ];
+
+    Platform.within.iframe && cls.push('within-iframe');
+    Platform.is.cordova && cls.push('cordova');
+    Platform.is.electron && cls.push('electron');
+
+    console.log('adding body classes', cls)
+    (ref = document.body.classList).add.apply(ref, cls);
+    var ref;
   });
-  captureErrors();
 
   if (opts.directives) {
     Object.keys(opts.directives).forEach(function (key) {
