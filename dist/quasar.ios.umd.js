@@ -277,15 +277,10 @@ function ready (fn) {
   }
 
   if (document.readyState === 'complete') {
-    console.log('ready immediate', fn);
     return fn()
   }
 
-  console.log('ready delayed', fn);
-  document.addEventListener('DOMContentLoaded', function () {
-    console.log('ready delayed --> now triggered');
-    fn();
-  }, false);
+  document.addEventListener('DOMContentLoaded', fn, false);
 }
 
 var prefix = ['-webkit-', '-moz-', '-ms-', '-o-'];
@@ -420,23 +415,20 @@ if (!Array.prototype.find) {
   });
 }
 
-/*
 function addBodyClasses () {
-  const cls = [
+  var cls = [
     "ios",
     Platform.is.desktop ? 'desktop' : 'mobile',
     Platform.has.touch ? 'touch' : 'no-touch',
-    `platform-${Platform.is.ios ? 'ios' : 'mat'}`
-  ]
+    ("platform-" + (Platform.is.ios ? 'ios' : 'mat'))
+  ];
 
-  Platform.within.iframe && cls.push('within-iframe')
-  Platform.is.cordova && cls.push('cordova')
-  Platform.is.electron && cls.push('electron')
+  Platform.within.iframe && cls.push('within-iframe');
+  Platform.is.cordova && cls.push('cordova');
+  Platform.is.electron && cls.push('electron');
 
-  console.log('adding body classes', cls)
-  document.body.classList.add(...cls)
+  document.body.classList.add.apply(document.body.classList, cls);
 }
-*/
 
 var install = function (_Vue, opts) {
   if ( opts === void 0 ) opts = {};
@@ -447,23 +439,7 @@ var install = function (_Vue, opts) {
   this.installed = true;
 
   setVue(_Vue);
-  ready(function () {
-    document.body.classList.add('test');
-    var cls = [
-      "ios",
-      Platform.is.desktop ? 'desktop' : 'mobile',
-      Platform.has.touch ? 'touch' : 'no-touch',
-      ("platform-" + (Platform.is.ios ? 'ios' : 'mat'))
-    ];
-
-    Platform.within.iframe && cls.push('within-iframe');
-    Platform.is.cordova && cls.push('cordova');
-    Platform.is.electron && cls.push('electron');
-
-    console.log('adding body classes', cls)
-    (ref = document.body.classList).add.apply(ref, cls);
-    var ref;
-  });
+  ready(addBodyClasses);
 
   if (opts.directives) {
     Object.keys(opts.directives).forEach(function (key) {
