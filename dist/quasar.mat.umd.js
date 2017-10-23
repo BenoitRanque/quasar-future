@@ -6447,6 +6447,9 @@ var QTooltip = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
     });
   },
   beforeDestroy: function beforeDestroy () {
+    if (!this.anchorEl) {
+      return
+    }
     if (Platform.is.mobile) {
       this.anchorEl.removeEventListener('click', this.open);
     }
@@ -7648,19 +7651,18 @@ var Dialog$1 = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
   },
   methods: {
     trigger: function trigger (handler, preventClose) {
-      var this$1 = this;
-
-      var handlerFn = typeof handler === 'function';
-      if (!handlerFn) {
+      if (typeof handler !== 'function') {
         this.close();
         return
       }
 
+      var data = this.getFormData();
+
       if (preventClose) {
-        handler(this.getFormData(), this.close);
+        handler(data, this.close);
       }
       else {
-        this.close(function () { handler(this$1.getFormData()); });
+        this.close(function () { handler(data); });
       }
     },
     getFormData: function getFormData () {
@@ -7682,12 +7684,14 @@ var Dialog$1 = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
       return data
     },
     close: function close (fn) {
+      var this$1 = this;
+
       if (!this.opened) {
         return
       }
       this.$refs.dialog.close(function () {
         if (typeof fn === 'function') {
-          fn();
+          fn(this$1.getFormData());
         }
       });
     },
@@ -7697,7 +7701,7 @@ var Dialog$1 = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c
     __dismiss: function __dismiss () {
       this.$root.$destroy();
       if (typeof this.onDismiss === 'function') {
-        this.onDismiss();
+        this.onDismiss(this.getFormData());
       }
     }
   },
