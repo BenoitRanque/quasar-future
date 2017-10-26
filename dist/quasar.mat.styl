@@ -2300,6 +2300,76 @@ maximized-modal()
   opacity 0
   .modal-content
     transform translateX(-101%)
+.q-layout
+  width 100%
+  min-height 100vh
+.q-layout-header
+  box-shadow $layout-header-shadow
+  &-hidden
+    transform translateY(-110%)
+.q-layout-footer
+  box-shadow $layout-footer-shadow
+  &-hidden
+    transform translateY(110%)
+.q-layout-drawer
+  position absolute
+  top 0
+  bottom 0
+  background $layout-aside-background
+  &.fixed
+    z-index $z-side
+    &.on-layout
+      box-shadow $layout-aside-shadow
+  &.on-top
+    z-index $z-fixed-side
+.q-layout-drawer-left
+  left 0
+  width $layout-aside-left-width
+.q-layout-drawer-right
+  right 0
+  width $layout-aside-right-width
+main, .q-layout, .q-layout-header, .q-layout-footer
+  position relative
+.q-layout-header, .q-layout-footer
+  z-index $z-marginals
+  transition transform .12s ease-in
+.q-layout-backdrop
+  z-index ($z-fixed-side - 1)
+  background $dimmed-background
+.q-layout-drawer-opener
+  z-index ($z-marginals + 1)
+  height 100vh
+  width 15px
+body
+  &.q-layout-animate
+    .q-layout-drawer, .q-layout-page-container, .q-page-sticky
+      transition all .12s ease-in
+  &.with-layout-drawer-opened
+    overflow hidden
+  &.cordova.platform-ios
+    .q-layout-header > .q-toolbar:first-child, .q-layout-drawer.top-padding
+      padding-top $ios-statusbar-height
+      min-height ($toolbar-min-height + $ios-statusbar-height)
+.layout-padding
+  @media (max-width $breakpoint-sm-max)
+    padding 1.5rem .5rem
+    &.horizontal
+      padding 0 .5rem
+  @media (min-width $breakpoint-md-min) and (max-width $breakpoint-md-max)
+    padding 1.5rem 2rem
+    margin auto
+    &.horizontal
+      padding 0 2rem
+  @media (min-width $breakpoint-lg-min) and (max-width $breakpoint-lg-max)
+    padding 2.5rem 3rem
+    margin auto
+    &.horizontal
+      padding 0 3rem
+  @media (min-width $breakpoint-xl-min)
+    padding 3rem 4rem
+    margin auto
+    &.horizontal
+      padding 0 4rem
 .q-option-inner
   display inline-block
   line-height 0
@@ -4937,23 +5007,23 @@ body.with-mixin-fullscreen
 .inline-block
   display inline-block !important
 for $space, $value in $spaces
-  .q-pl-{$space}
+  .q-pl-{$space}, .q-px-{$space}
     padding-left: $value.x
-  .q-pr-{$space}
+  .q-pr-{$space}, .q-px-{$space}
     padding-right: $value.x
-  .q-pt-{$space}
+  .q-pt-{$space}, .q-py-{$space}
     padding-top: $value.y
-  .q-pb-{$space}
+  .q-pb-{$space}, .q-py-{$space}
     padding-bottom: $value.y
   .q-pa-{$space}
     padding: $value.y $value.x
-  .q-ml-{$space}
+  .q-ml-{$space}, .q-mx-{$space}
     margin-left: $value.x
-  .q-mr-{$space}
+  .q-mr-{$space}, .q-mx-{$space}
     margin-right: $value.x
-  .q-mt-{$space}
+  .q-mt-{$space}, .q-my-{$space}
     margin-top: $value.y
-  .q-mb-{$space}
+  .q-mb-{$space}, .q-my-{$space}
     margin-bottom: $value.y
   .q-ma-{$space}
     margin: $value.y $value.x
