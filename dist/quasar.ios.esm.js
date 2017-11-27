@@ -5,12 +5,6 @@
  */
 var version = "0.15.0";
 
-var Vue;
-
-function setVue (_Vue) {
-  Vue = _Vue;
-}
-
 function offset (el) {
   if (el === window) {
     return {top: 0, left: 0}
@@ -309,8 +303,7 @@ var History = {
     document.addEventListener('deviceready', function () {
       document.addEventListener('backbutton', function () {
         if (this$1.__history.length) {
-          var fn = this$1.__history.pop().handler;
-          fn();
+          this$1.__history.pop().handler();
         }
         else {
           window.history.back();
@@ -453,8 +446,6 @@ var install = function (_Vue, opts) {
     return
   }
   this.__installed = true;
-
-  setVue(_Vue);
 
   var $q = {
     version: version,
@@ -628,6 +619,11 @@ function extend () {
   return target
 }
 
+// Needs:
+// __show()
+// __hide()
+// Calling this.showPromiseResolve, this.hidePromiseResolve
+// avoid backbutton with setting noShowingHistory
 var ModelToggleMixin = {
   props: {
     value: Boolean
@@ -1977,87 +1973,81 @@ var typeIcon = {
   warning: 'priority_high'
 };
 
-var QAlert = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-alert-container",class:_vm.containerClass},[_c('q-transition',{attrs:{"name":_vm.name,"enter":_vm.enter,"leave":_vm.leave,"duration":_vm.duration,"appear":_vm.appear},on:{"after-leave":function($event){_vm.$emit('dismiss-end');}}},[(_vm.active)?_c('div',{staticClass:"q-alert row no-wrap",class:_vm.classes},[_c('div',{staticClass:"q-alert-icon row col-auto flex-center"},[_c('q-icon',{attrs:{"name":_vm.alertIcon}})],1),_vm._v(" "),_c('div',{staticClass:"q-alert-content col self-center"},[_vm._t("default"),_vm._v(" "),(_vm.actions && _vm.actions.length)?_c('div',{staticClass:"q-alert-actions row items-center"},_vm._l((_vm.actions),function(btn){return _c('span',{key:btn.label,staticClass:"uppercase",domProps:{"innerHTML":_vm._s(btn.label)},on:{"click":function($event){_vm.dismiss(btn.handler);}}})})):_vm._e()],2),_vm._v(" "),(_vm.dismissible)?_c('div',{staticClass:"q-alert-close self-top col-auto"},[_c('q-icon',{staticClass:"cursor-pointer",attrs:{"name":"close"},on:{"click":_vm.dismiss}})],1):_vm._e()]):_vm._e()])],1)},staticRenderFns: [],
+var QAlert = {
   name: 'q-alert',
-  components: {
-    QIcon: QIcon,
-    QTransition: QTransition
-  },
   props: {
-    value: {
-      type: Boolean,
-      default: true
+    type: {
+      type: String,
+      validator: function (v) { return ['positive', 'negative', 'warning', 'info'].includes(v); }
     },
-    duration: Number,
-    name: String,
-    enter: String,
-    leave: String,
-    appear: Boolean,
     color: {
       type: String,
       default: 'negative'
     },
-    inline: Boolean,
+    textColor: String,
     icon: String,
-    dismissible: Boolean,
+    avatar: String,
     actions: Array,
-    position: {
-      type: String,
-      validator: function (v) { return [
-        'top', 'top-right', 'right', 'bottom-right',
-        'bottom', 'bottom-left', 'left', 'top-left',
-        'top-center', 'bottom-center'
-      ].includes(v); }
-    }
-  },
-  data: function data () {
-    return {
-      active: this.value
-    }
-  },
-  watch: {
-    value: function value (v) {
-      if (v !== this.active) {
-        this.active = v;
-        if (!v) {
-          this.$emit('dismiss');
-        }
-      }
-    }
+    message: String
   },
   computed: {
-    alertIcon: function alertIcon () {
-      return this.icon || typeIcon[this.color] || typeIcon.warning
-    },
-    containerClass: function containerClass () {
-      var cls = [];
-      var pos = this.position;
-
-      if (pos) {
-        if (pos.indexOf('center') > -1) {
-          cls.push('row justify-center');
-          pos = pos.split('-')[0];
-        }
-        cls.push(("fixed-" + pos + (pos === 'left' || pos === 'right' ? ' row items-center' : '') + " z-alert"));
-      }
-      if (this.inline) {
-        cls.push('inline-block');
-      }
-      return cls
+    computedIcon: function computedIcon () {
+      return this.icon
+        ? this.icon
+        : typeIcon[this.type || this.color]
     },
     classes: function classes () {
-      return ("shadow-2 bg-" + (this.color))
+      var cls = "bg-" + (this.type || this.color);
+      if (this.textColor) {
+        cls += " text-" + (this.textColor);
+      }
+      return cls
     }
   },
-  methods: {
-    dismiss: function dismiss (fn) {
-      this.active = false;
-      this.$emit('input', false);
-      this.$emit('dismiss');
-      if (typeof fn === 'function') {
-        fn();
-      }
+  render: function render (h) {
+    var side = [];
+
+    if (this.avatar) {
+      side.push(
+        h('img', {
+          staticClass: 'avatar',
+          domProps: { src: this.avatar }
+        })
+      );
     }
+    else if (this.icon || this.type) {
+      side.push(
+        h(QIcon, {
+          props: { name: this.computedIcon }
+        })
+      );
+    }
+
+    return h('div', [
+      h('div', {
+        staticClass: 'q-alert row no-wrap shadow-2',
+        'class': this.classes
+      }, [
+        side.length
+          ? h('div', { staticClass: 'q-alert-side row col-auto flex-center' }, side)
+          : null,
+        h('div', {
+          staticClass: 'q-alert-content col self-center'
+        }, [
+          this.$slots.default || this.message,
+          this.actions && this.actions.length
+            ? h('div', { staticClass: 'q-alert-actions row items-center' },
+              this.actions.map(function (action) { return h('span', {
+                  on: {
+                    click: function () { return action.handler(); }
+                  }
+                }, [ action.label ]); }
+              )
+            )
+            : null
+        ])
+      ])
+    ])
   }
 };
 
@@ -3673,7 +3663,8 @@ var BtnMixin = {
     big: Boolean,
     color: String,
     glossy: Boolean,
-    compact: Boolean
+    compact: Boolean,
+    noRipple: Boolean
   },
   computed: {
     size: function size () {
@@ -3727,7 +3718,7 @@ var BtnMixin = {
   }
 };
 
-var QBtn = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('button',{directives:[{name:"ripple",rawName:"v-ripple.mat",value:(!_vm.isDisabled),expression:"!isDisabled",modifiers:{"mat":true}}],staticClass:"q-btn row inline flex-center q-focusable q-hoverable relative-position",class:_vm.classes,on:{"click":_vm.click}},[_c('div',{staticClass:"desktop-only q-focus-helper"}),_vm._v(" "),(_vm.loading && _vm.hasPercentage)?_c('div',{staticClass:"q-btn-progress absolute-full",class:{'q-btn-dark-progress': _vm.darkPercentage},style:({width: _vm.width})}):_vm._e(),_vm._v(" "),_c('span',{staticClass:"q-btn-inner row col flex-center",class:{'no-wrap': _vm.noWrap, 'text-no-wrap': _vm.noWrap}},[(_vm.loading)?_vm._t("loading",[_c('q-spinner')]):[(_vm.icon)?_c('q-icon',{class:{'on-left': _vm.label && !_vm.round},attrs:{"name":_vm.icon}}):_vm._e(),_vm._v(" "),(_vm.label && !_vm.round)?_c('span',[_vm._v(_vm._s(_vm.label))]):_vm._e(),_vm._v(" "),_vm._t("default"),_vm._v(" "),(!_vm.round && _vm.iconRight)?_c('q-icon',{staticClass:"on-right",attrs:{"name":_vm.iconRight}}):_vm._e()]],2)])},staticRenderFns: [],
+var QBtn = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('button',{directives:[{name:"ripple",rawName:"v-ripple.mat",value:(_vm.hasRipple),expression:"hasRipple",modifiers:{"mat":true}}],staticClass:"q-btn row inline flex-center q-focusable q-hoverable relative-position",class:_vm.classes,on:{"click":_vm.click}},[_c('div',{staticClass:"desktop-only q-focus-helper"}),_vm._v(" "),(_vm.loading && _vm.hasPercentage)?_c('div',{staticClass:"q-btn-progress absolute-full",class:{'q-btn-dark-progress': _vm.darkPercentage},style:({width: _vm.width})}):_vm._e(),_vm._v(" "),_c('span',{staticClass:"q-btn-inner row col flex-center",class:{'no-wrap': _vm.noWrap, 'text-no-wrap': _vm.noWrap}},[(_vm.loading)?_vm._t("loading",[_c('q-spinner')]):[(_vm.icon)?_c('q-icon',{class:{'on-left': _vm.label && !_vm.round},attrs:{"name":_vm.icon}}):_vm._e(),_vm._v(" "),(_vm.label && !_vm.round)?_c('span',[_vm._v(_vm._s(_vm.label))]):_vm._e(),_vm._v(" "),_vm._t("default"),_vm._v(" "),(!_vm.round && _vm.iconRight)?_c('q-icon',{staticClass:"on-right",attrs:{"name":_vm.iconRight}}):_vm._e()]],2)])},staticRenderFns: [],
   name: 'q-btn',
   mixins: [BtnMixin],
   components: {
@@ -3757,6 +3748,9 @@ var QBtn = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm
     },
     width: function width () {
       return ((between(this.percentage, 0, 100)) + "%")
+    },
+    hasRipple: function hasRipple () {
+      return !this.noRipple && !this.isDisabled
     }
   },
   methods: {
@@ -3768,15 +3762,29 @@ var QBtn = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm
       if (this.isDisabled) {
         return
       }
-      if (this.loader !== false || this.$slots.loading) {
-        this.loading = true;
-        this.$emit('input', true);
+
+      clearTimeout(this.timer);
+      var trigger = function () {
+        if (this$1.loader !== false || this$1.$slots.loading) {
+          this$1.loading = true;
+          this$1.$emit('input', true);
+        }
+        this$1.$emit('click', e, function () {
+          this$1.loading = false;
+          this$1.$emit('input', false);
+        });
+      };
+
+      if ("ios" !== 'mat' || this.noRipple) {
+        trigger();
       }
-      this.$emit('click', e, function () {
-        this$1.loading = false;
-        this$1.$emit('input', false);
-      });
+      else {
+        this.timer = setTimeout(trigger, 350);
+      }
     }
+  },
+  beforeDestroy: function beforeDestroy () {
+    clearTimeout(this.timer);
   }
 };
 
@@ -7336,13 +7344,14 @@ var QDialog = {
       return this.$refs.modal.show()
     },
     hide: function hide () {
+      var this$1 = this;
+
       var data;
 
-      if (this.hasForm) {
-        data = clone(this.__getData());
-      }
-
       return this.$refs.modal.hide().then(function () {
+        if (this$1.hasForm) {
+          data = clone(this$1.__getData());
+        }
         return data
       })
     },
@@ -8926,15 +8935,23 @@ var QLayoutDrawer = {
     }
   },
   data: function data () {
-    var belowBreakpoint = (
-      this.behavior === 'mobile' ||
-      (this.behavior !== 'desktop' && this.breakpoint >= this.layout.width)
-    );
+    var
+      largeScreenState = this.value !== void 0 ? this.value : true,
+      showing = this.behavior !== 'mobile' && this.breakpoint < this.layout.width && !this.overlay
+        ? largeScreenState
+        : false;
+
+    if (this.value !== void 0 && this.value !== showing) {
+      this.$emit('input', showing);
+    }
 
     return {
-      showing: true,
-      belowBreakpoint: belowBreakpoint,
-      largeScreenState: this.value,
+      showing: showing,
+      belowBreakpoint: (
+        this.behavior === 'mobile' ||
+        (this.behavior !== 'desktop' && this.breakpoint >= this.layout.width)
+      ),
+      largeScreenState: largeScreenState,
       mobileOpened: false,
 
       size: 300,
@@ -9146,10 +9163,7 @@ var QLayoutDrawer = {
   created: function created () {
     var this$1 = this;
 
-    if (this.belowBreakpoint || this.overlay) {
-      this.hide();
-    }
-    else if (this.onLayout) {
+    if (this.onLayout) {
       this.__update('space', true);
       this.__update('offset', this.offset);
     }
@@ -12166,7 +12180,8 @@ var TableHeader = {
             h(QProgress, {
               props: {
                 color: this.color,
-                indeterminate: true
+                indeterminate: true,
+                height: '2px'
               }
             })
           ])
@@ -12374,14 +12389,6 @@ var TableBody = {
     getCellValue: function getCellValue (col, row) {
       var val = typeof col.field === 'function' ? col.field(row) : row[col.field];
       return col.format ? col.format(val) : val
-    }
-  }
-};
-
-var TableFooter = {
-  methods: {
-    getTableFooter: function getTableFooter (h) {
-      return h('tfoot', [])
     }
   }
 };
@@ -12789,7 +12796,6 @@ var QTable = {
     Top,
     TableHeader,
     TableBody,
-    TableFooter,
     Bottom,
     Sort,
     Filter,
@@ -12914,8 +12920,7 @@ var QTable = {
           h('table', { staticClass: ("q-table q-table-" + (this.separator) + "-separator" + (this.dark ? ' q-table-dark' : '')) },
             [
               this.getTableHeader(h),
-              this.getTableBody(h),
-              this.getTableFooter(h)
+              this.getTableBody(h)
             ]
           )
         ]),
@@ -14210,111 +14215,230 @@ var dialog = {
 };
 
 var vm;
-var appIsInProgress = false;
 var timeout;
 var props = {};
 
 var staticClass = 'q-loading animate-fade fullscreen column flex-center z-max';
 
-function show (ref) {
-  if ( ref === void 0 ) ref = {};
-  var delay = ref.delay; if ( delay === void 0 ) delay = 500;
-  var message = ref.message; if ( message === void 0 ) message = false;
-  var spinnerSize = ref.spinnerSize; if ( spinnerSize === void 0 ) spinnerSize = 80;
-  var spinnerColor = ref.spinnerColor; if ( spinnerColor === void 0 ) spinnerColor = 'white';
-  var messageColor = ref.messageColor; if ( messageColor === void 0 ) messageColor = 'white';
-  var spinner = ref.spinner; if ( spinner === void 0 ) spinner = QSpinner;
-  var customClass = ref.customClass; if ( customClass === void 0 ) customClass = false;
-
-  props.spinner = spinner;
-  props.message = message;
-  props.spinnerSize = spinnerSize;
-  props.spinnerColor = spinnerColor;
-  props.messageColor = messageColor;
-
-  if (customClass && typeof customClass === 'string') {
-    props.customClass = " " + (customClass.trim());
-  }
-
-  if (appIsInProgress) {
-    vm && vm.$forceUpdate();
-    return
-  }
-
-  timeout = setTimeout(function () {
-    timeout = null;
-
-    var node = document.createElement('div');
-    document.body.appendChild(node);
-    document.body.classList.add('with-loading');
-
-    vm = new Vue({
-      name: 'q-loading',
-      el: node,
-      functional: true,
-      render: function render (h) {
-        var child = [
-          h(props.spinner, {
-            props: {
-              color: props.spinnerColor,
-              size: props.spinnerSize
-            }
-          })
-        ];
-
-        if (message) {
-          child.push(h('div', {
-            staticClass: ("text-" + (props.messageColor)),
-            domProps: {
-              innerHTML: props.message
-            }
-          }));
-        }
-
-        return h('div', {staticClass: staticClass + props.customClass}, child)
-      }
-    });
-  }, delay);
-
-  appIsInProgress = true;
-}
-
-function hide () {
-  if (!appIsInProgress) {
-    return
-  }
-
-  if (timeout) {
-    clearTimeout(timeout);
-    timeout = null;
-  }
-  else {
-    vm.$destroy();
-    document.body.classList.remove('with-loading');
-    document.body.removeChild(vm.$el);
-    vm = null;
-  }
-
-  appIsInProgress = false;
-}
-
 var Loading = {
-  show: show,
-  hide: hide,
+  isActive: false,
 
+  show: function show (ref) {
+    var this$1 = this;
+    if ( ref === void 0 ) ref = {};
+    var delay = ref.delay; if ( delay === void 0 ) delay = 500;
+    var message = ref.message; if ( message === void 0 ) message = false;
+    var spinnerSize = ref.spinnerSize; if ( spinnerSize === void 0 ) spinnerSize = 80;
+    var spinnerColor = ref.spinnerColor; if ( spinnerColor === void 0 ) spinnerColor = 'white';
+    var messageColor = ref.messageColor; if ( messageColor === void 0 ) messageColor = 'white';
+    var spinner = ref.spinner; if ( spinner === void 0 ) spinner = QSpinner;
+    var customClass = ref.customClass; if ( customClass === void 0 ) customClass = false;
+
+    props.spinner = spinner;
+    props.message = message;
+    props.spinnerSize = spinnerSize;
+    props.spinnerColor = spinnerColor;
+    props.messageColor = messageColor;
+
+    if (customClass && typeof customClass === 'string') {
+      props.customClass = " " + (customClass.trim());
+    }
+
+    if (this.isActive) {
+      vm && vm.$forceUpdate();
+      return
+    }
+
+    timeout = setTimeout(function () {
+      timeout = null;
+
+      var node = document.createElement('div');
+      document.body.appendChild(node);
+      document.body.classList.add('with-loading');
+
+      vm = new this$1.__Vue({
+        name: 'q-loading',
+        el: node,
+        functional: true,
+        render: function render (h) {
+          var child = [
+            h(props.spinner, {
+              props: {
+                color: props.spinnerColor,
+                size: props.spinnerSize
+              }
+            })
+          ];
+
+          if (message) {
+            child.push(h('div', {
+              staticClass: ("text-" + (props.messageColor)),
+              domProps: {
+                innerHTML: props.message
+              }
+            }));
+          }
+
+          return h('div', {staticClass: staticClass + props.customClass}, child)
+        }
+      });
+    }, delay);
+
+    this.isActive = true;
+  },
+  hide: function hide () {
+    if (!this.isActive) {
+      return
+    }
+
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    else {
+      vm.$destroy();
+      document.body.classList.remove('with-loading');
+      document.body.removeChild(vm.$el);
+      vm = null;
+    }
+
+    this.isActive = false;
+  },
+
+  __Vue: null,
   __installed: false,
   install: function install (ref) {
     var $q = ref.$q;
+    var Vue = ref.Vue;
+
     if (this.__installed) { return }
     this.__installed = true;
 
     $q.loading = Loading;
+    this.__Vue = Vue;
   }
 };
 
-Object.defineProperty(Loading, 'isActive', {
-  get: function () { return appIsInProgress; }
-});
+var positionList = [
+  'top-left', 'top-right',
+  'bottom-left', 'bottom-right',
+  'top', 'bottom', 'left', 'right', 'center'
+];
+
+var notify = {
+  create: function create (opts) {
+    return this.__vm.add(opts)
+  },
+
+  __installed: false,
+  install: function install (ref) {
+    var $q = ref.$q;
+    var Vue = ref.Vue;
+
+    if (this.__installed) { return }
+    this.__installed = true;
+
+    var node = document.createElement('div');
+    document.body.appendChild(node);
+
+    this.__vm = new Vue({
+      name: 'q-notifications',
+      data: {
+        notifs: {
+          center: [],
+          left: [],
+          right: [],
+          top: [],
+          'top-left': [],
+          'top-right': [],
+          bottom: [],
+          'bottom-left': [],
+          'bottom-right': []
+        }
+      },
+      methods: {
+        add: function add (notif) {
+          var this$1 = this;
+
+          if (!notif) {
+            console.error('Notify: parameter required');
+            return false
+          }
+          if (typeof notif === 'string') {
+            notif = {
+              message: notif,
+              timeout: 5000
+            };
+          }
+          else if (notif.position) {
+            if (!positionList.includes(notif.position)) {
+              console.error(("Notify: wrong position: " + (notif.position)));
+              return false
+            }
+          }
+          else {
+            notif.position = 'bottom';
+          }
+
+          notif.__uid = uid();
+
+          var action = notif.position.indexOf('top') > -1 ? 'unshift' : 'push';
+          this.notifs[notif.position][action](notif);
+
+          var close = function () {
+            this$1.remove(notif);
+          };
+
+          if (notif.timeout) {
+            notif.__timeout = setTimeout(function () {
+              close();
+            }, notif.timeout + /* show duration */ 1000);
+          }
+
+          return close
+        },
+        remove: function remove (notif) {
+          if (notif.__timeout) { clearTimeout(notif.__timeout); }
+
+          var index = this.notifs[notif.position].indexOf(notif);
+          if (index !== -1) {
+            this.notifs[notif.position].splice(index, 1);
+          }
+        }
+      },
+      render: function render (h) {
+        var this$1 = this;
+
+        return h('div', { staticClass: 'q-notifications' }, positionList.map(function (pos) {
+          var
+            vert = ['left', 'center', 'right'].includes(pos) ? 'center' : (pos.indexOf('top') > -1 ? 'top' : 'bottom'),
+            align = pos.indexOf('left') > -1 ? 'start' : (pos.indexOf('right') > -1 ? 'end' : 'center'),
+            classes = ['left', 'right'].includes(pos) ? ("items-" + (pos === 'left' ? 'start' : 'end') + " justify-center") : (pos === 'center' ? 'flex-center' : ("items-" + align));
+
+          return h(QTransition, {
+            key: pos,
+            staticClass: ("q-notification-list q-notification-list-" + vert + " fixed column " + classes),
+            tag: 'div',
+            props: {
+              group: true,
+              name: ("q-notification-" + pos),
+              mode: 'out-in'
+            }
+          }, this$1.notifs[pos].map(function (notif) {
+            return h(QAlert, {
+              key: notif.__uid,
+              staticClass: 'q-notification',
+              props: notif
+            }, [ notif.message ])
+          }))
+        }))
+      }
+    });
+
+    this.__vm.$mount(node);
+    $q.notify = this.create.bind(this);
+  }
+};
 
 function encode$1 (value) {
   if (Object.prototype.toString.call(value) === '[object Date]') {
@@ -14505,258 +14629,6 @@ var SessionStorage = {
   }
 };
 
-function create (opts) {
-  var node = document.createElement('div');
-  document.body.appendChild(node);
-
-  var state = extend(
-    {position: 'top-right'},
-    opts,
-    {
-      value: true,
-      appear: true,
-      dismissible: !opts.actions || !opts.actions.length
-    }
-  );
-
-  var vm = new Vue({
-    functional: true,
-    render: function render (h, ctx) {
-      var on = {};
-      on[opts.leave === void 0 ? 'dismiss' : 'dismiss-end'] = function () {
-        vm.$destroy();
-        vm.$el.parentNode.removeChild(vm.$el);
-        if (opts.onDismiss) {
-          opts.onDismiss();
-        }
-      };
-
-      return h(
-        QAlert, {
-          style: {
-            padding: '18px'
-          },
-          on: on,
-          props: state
-        },
-        [
-          h('span', {
-            domProps: {
-              innerHTML: opts.html
-            }
-          })
-        ]
-      )
-    }
-  });
-
-  vm.$mount(node);
-
-  return {
-    dismiss: function dismiss () {
-      state.value = false;
-      vm.$forceUpdate();
-    }
-  }
-}
-
-var Alert = {
-  create: create
-};
-
-var transitionDuration = 300;
-var displayDuration = 2500; // in ms
-
-function parseOptions (opts, defaults) {
-  if (!opts) {
-    throw new Error('Missing toast options.')
-  }
-
-  var options = extend(
-    true,
-    {},
-    defaults,
-    typeof opts === 'string' ? {html: opts} : opts
-  );
-
-  if (!options.html) {
-    throw new Error('Missing toast content/HTML.')
-  }
-
-  return options
-}
-
-var Toast = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-toast-container",class:{active: _vm.active}},[(_vm.stack[0])?_c('div',{staticClass:"q-toast row no-wrap items-center non-selectable",class:_vm.classes,style:({color: _vm.stack[0].color, background: _vm.stack[0].bgColor})},[(_vm.stack[0].icon)?_c('q-icon',{attrs:{"name":_vm.stack[0].icon}}):_vm._e(),_vm._v(" "),(_vm.stack[0].image)?_c('img',{attrs:{"src":_vm.stack[0].image}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"q-toast-message col",domProps:{"innerHTML":_vm._s(_vm.stack[0].html)}}),_vm._v(" "),(_vm.stack[0].button && _vm.stack[0].button.label)?_c('a',{style:({color: _vm.stack[0].button.color}),on:{"click":function($event){_vm.dismiss(_vm.stack[0].button.handler);}}},[_vm._v(" "+_vm._s(_vm.stack[0].button.label)+" ")]):_vm._e(),_vm._v(" "),_c('a',{style:({color: _vm.stack[0].button.color}),on:{"click":function($event){_vm.dismiss();}}},[_c('q-icon',{attrs:{"name":"close"}})],1)],1):_vm._e()])},staticRenderFns: [],
-  name: 'q-toast',
-  components: {
-    QIcon: QIcon
-  },
-  data: function data () {
-    return {
-      active: false,
-      inTransition: false,
-      stack: [],
-      timer: null,
-      defaults: {
-        color: 'white',
-        bgColor: '#323232',
-        button: {
-          color: 'inherit'
-        }
-      }
-    }
-  },
-  computed: {
-    classes: function classes () {
-      if (!this.stack.length || !this.stack[0].classes) {
-        return {}
-      }
-
-      return this.stack[0].classes.split(' ')
-    }
-  },
-  methods: {
-    create: function create (options) {
-      var this$1 = this;
-
-      this.stack.push(parseOptions(options, this.defaults));
-
-      if (this.active || this.inTransition) {
-        return
-      }
-
-      this.activeTimer = setTimeout(function () {
-        this$1.active = true;
-      }, 10);
-      this.inTransition = true;
-
-      this.__show();
-    },
-    __show: function __show () {
-      var this$1 = this;
-
-      this.timer = setTimeout(function () {
-        if (this$1.stack.length > 0) {
-          this$1.dismiss();
-        }
-        else {
-          this$1.inTransition = false;
-        }
-      }, transitionDuration + (this.stack[0].timeout || displayDuration));
-    },
-    dismiss: function dismiss (done) {
-      var this$1 = this;
-
-      clearTimeout(this.timer);
-      clearTimeout(this.activeTimer);
-      this.active = false;
-      this.timer = null;
-
-      setTimeout(function () {
-        if (typeof this$1.stack[0].onDismiss === 'function') {
-          this$1.stack[0].onDismiss();
-        }
-
-        this$1.stack.shift();
-        done && done();
-
-        if (this$1.stack.length > 0) {
-          this$1.active = true;
-          this$1.__show();
-          return
-        }
-
-        this$1.inTransition = false;
-      }, transitionDuration + 50);
-    },
-    setDefaults: function setDefaults (opts) {
-      extend(true, this.defaults, opts);
-    }
-  }
-};
-
-var toast;
-var defaults;
-var toastStack = [];
-var installed = false;
-var types = [
-    {
-      name: 'positive',
-      defaults: {icon: typeIcon.positive, classes: 'bg-positive'}
-    },
-    {
-      name: 'negative',
-      defaults: {icon: typeIcon.negative, classes: 'bg-negative'}
-    },
-    {
-      name: 'info',
-      defaults: {icon: typeIcon.info, classes: 'bg-info'}
-    },
-    {
-      name: 'warning',
-      defaults: {icon: typeIcon.warning, classes: 'bg-warning'}
-    }
-  ];
-
-function create$1 (opts, defaults) {
-  if (!opts) {
-    throw new Error('Missing toast options.')
-  }
-
-  if (defaults) {
-    opts = extend(
-      true,
-      typeof opts === 'string' ? {html: opts} : opts,
-      defaults
-    );
-  }
-
-  if (!toast) {
-    toastStack.push(opts);
-    if (!installed) {
-      install$1();
-    }
-    return
-  }
-
-  toast.create(opts);
-}
-
-types.forEach(function (type) {
-  create$1[type.name] = function (opts) { return create$1(opts, type.defaults); };
-});
-
-function install$1 () {
-  installed = true;
-  ready(function () {
-    var node = document.createElement('div');
-    document.body.appendChild(node);
-    toast = new Vue(Toast).$mount(node);
-    if (defaults) {
-      toast.setDefaults(defaults);
-    }
-    if (toastStack.length) {
-      setTimeout(function () {
-        toastStack.forEach(function (opts) {
-          toast.create(opts);
-        });
-      }, 100);
-    }
-  });
-}
-
-var index = {
-  create: create$1,
-  setDefaults: function setDefaults (opts) {
-    if (toast) {
-      toast.setDefaults(opts);
-    }
-    else {
-      defaults = opts;
-    }
-  }
-};
-
 var openUrl = function (url, reject) {
   if (Platform.is.cordova && navigator && navigator.app) {
     return navigator.app.loadUrl(url, {
@@ -14804,5 +14676,5 @@ var index_esm = {
   theme: "ios"
 };
 
-export { QApp, QActionSheet, QAjaxBar, QAlert, QAutocomplete, QBtn, QBtnGroup, QBtnToggle, QBtnDropdown, QBtnToggleGroup, QCard, QCardTitle, QCardMain, QCardActions, QCardMedia, QCardSeparator, QCarousel, QCarouselSlide, QCarouselControl, QChatMessage, QCheckbox, QChip, QChipsInput, QCollapsible, QContextMenu, QDatetime, QDatetimeRange, QInlineDatetime, QDialog, QEditor, QFab, QFabAction, QField, QFieldReset, QIcon, QInfiniteScroll, QInnerLoading, QInput, QInputFrame, QKnob, QLayout, QLayoutDrawer, QLayoutFooter, QLayoutHeader, QPage, QPageContainer, QPageSticky, QItem, QItemSeparator, QItemMain, QItemSide, QItemTile, QItemWrapper, QList, QListHeader, QModal, QModalLayout, QResizeObservable, QScrollObservable, QWindowResizeObservable, QOptionGroup, QPagination, QParallax, QPopover, QProgress, QPullToRefresh, QRadio, QRange, QRating, QScrollArea, QSearch, QSelect, QDialogSelect, QSlideTransition, QSlider, QSpinner, audio as QSpinnerAudio, ball as QSpinnerBall, bars as QSpinnerBars, circles as QSpinnerCircles, comment as QSpinnerComment, cube as QSpinnerCube, dots as QSpinnerDots, facebook as QSpinnerFacebook, gears as QSpinnerGears, grid as QSpinnerGrid, hearts as QSpinnerHearts, hourglass as QSpinnerHourglass, infinity as QSpinnerInfinity, DefaultSpinner as QSpinnerIos, QSpinner_mat as QSpinnerMat, oval as QSpinnerOval, pie as QSpinnerPie, puff as QSpinnerPuff, radio as QSpinnerRadio, rings as QSpinnerRings, tail as QSpinnerTail, QStep, QStepper, QStepperNavigation, QRouteTab, QTab, QTabPane, QTabs, QTable, QTh, QTr, QTd, QTableColumns, QToggle, QToolbar, QToolbarTitle, QTooltip, QTransition, QTree, QUploader, QVideo, backToTop as BackToTop, goBack as GoBack, move as Move, Ripple, scrollFire as ScrollFire, scroll$1 as Scroll, touchHold as TouchHold, TouchPan, TouchSwipe, actionSheet as ActionSheet, addressbarColor as AddressbarColor, appFullscreen as AppFullscreen, appVisibility as AppVisibility, cookies as Cookies, dialog as Dialog, Loading, Platform, LocalStorage, SessionStorage, Alert, index as Toast, animate, clone, colors, date, debounce, frameDebounce, dom, easing, event, extend, filter, format, noop, openUrl as openURL, scroll, throttle, uid };
+export { QApp, QActionSheet, QAjaxBar, QAlert, QAutocomplete, QBtn, QBtnGroup, QBtnToggle, QBtnDropdown, QBtnToggleGroup, QCard, QCardTitle, QCardMain, QCardActions, QCardMedia, QCardSeparator, QCarousel, QCarouselSlide, QCarouselControl, QChatMessage, QCheckbox, QChip, QChipsInput, QCollapsible, QContextMenu, QDatetime, QDatetimeRange, QInlineDatetime, QDialog, QEditor, QFab, QFabAction, QField, QFieldReset, QIcon, QInfiniteScroll, QInnerLoading, QInput, QInputFrame, QKnob, QLayout, QLayoutDrawer, QLayoutFooter, QLayoutHeader, QPage, QPageContainer, QPageSticky, QItem, QItemSeparator, QItemMain, QItemSide, QItemTile, QItemWrapper, QList, QListHeader, QModal, QModalLayout, QResizeObservable, QScrollObservable, QWindowResizeObservable, QOptionGroup, QPagination, QParallax, QPopover, QProgress, QPullToRefresh, QRadio, QRange, QRating, QScrollArea, QSearch, QSelect, QDialogSelect, QSlideTransition, QSlider, QSpinner, audio as QSpinnerAudio, ball as QSpinnerBall, bars as QSpinnerBars, circles as QSpinnerCircles, comment as QSpinnerComment, cube as QSpinnerCube, dots as QSpinnerDots, facebook as QSpinnerFacebook, gears as QSpinnerGears, grid as QSpinnerGrid, hearts as QSpinnerHearts, hourglass as QSpinnerHourglass, infinity as QSpinnerInfinity, DefaultSpinner as QSpinnerIos, QSpinner_mat as QSpinnerMat, oval as QSpinnerOval, pie as QSpinnerPie, puff as QSpinnerPuff, radio as QSpinnerRadio, rings as QSpinnerRings, tail as QSpinnerTail, QStep, QStepper, QStepperNavigation, QRouteTab, QTab, QTabPane, QTabs, QTable, QTh, QTr, QTd, QTableColumns, QToggle, QToolbar, QToolbarTitle, QTooltip, QTransition, QTree, QUploader, QVideo, backToTop as BackToTop, goBack as GoBack, move as Move, Ripple, scrollFire as ScrollFire, scroll$1 as Scroll, touchHold as TouchHold, TouchPan, TouchSwipe, actionSheet as ActionSheet, addressbarColor as AddressbarColor, appFullscreen as AppFullscreen, appVisibility as AppVisibility, cookies as Cookies, dialog as Dialog, Loading, notify as Notify, Platform, LocalStorage, SessionStorage, animate, clone, colors, date, debounce, frameDebounce, dom, easing, event, extend, filter, format, noop, openUrl as openURL, scroll, throttle, uid };
 export default index_esm;
