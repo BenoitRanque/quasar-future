@@ -422,36 +422,43 @@ if (!Array.prototype.find) {
 }
 
 var langEn = {
-  date: {
-    days: 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_'),
-    month: 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_')
-  },
   label: {
     clear: 'Clear',
     ok: 'OK',
     cancel: 'Cancel',
+    close: 'Close',
     set: 'Set',
     select: 'Select',
+    reset: 'Reset',
     remove: 'Remove',
     update: 'Update',
     create: 'Create',
-    search: 'Search', // QSearch
-    filter: 'Filter' // QSelect
+    search: 'Search',
+    filter: 'Filter',
+    refresh: 'Refresh'
+  },
+  date: {
+    days: 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_'),
+    daysShort: 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_'),
+    months: 'January_February_March_April_May_June_July_August_September_October_November_December'.split('_'),
+    monthsShort: 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_'),
+    firstDayOfWeek: 0, // 0-6, 0 - Sunday, 1 Monday, ...
+    format24h: false
   },
   pullToRefresh: {
     pull: 'Pull down to refresh',
     release: 'Release to refresh',
     refresh: 'Refreshing...'
   },
-  dataTable: {
+  table: {
     noData: 'No data available',
     noResults: 'No matching records found',
     loader: 'Loading...',
-    selectedRows: function (rows) { return (rows + " selected row(s)."); },
+    selectedRows: function (rows) { return rows > 1 ? (rows + " selected row(s).") : ((rows === 0 ? 'No' : '1') + " selected rows."); },
     rowsPerPage: 'Rows per page:',
     allRows: 'All',
     pagination: function (start, end, total) { return (start + "-" + end + " of " + total); },
-    columns: 'Columns' // QTableColumns
+    columns: 'Columns'
   },
   editor: {
     link: 'Link',
@@ -475,6 +482,9 @@ var langEn = {
     outdent: 'Decrease indentation',
     indent: 'Increase indentation',
     removeFormat: 'Remove formatting',
+    formatting: 'Formatting',
+    fontSize: 'Font Size',
+    align: 'Align',
     hr: 'Insert Horizontal Rule',
     undo: 'Undo',
     redo: 'Redo',
@@ -510,6 +520,8 @@ var i18n = {
 
     this.set = function (lang) {
       if ( lang === void 0 ) lang = langEn;
+
+      lang.set = this$1.set;
 
       Vue.set($q, 'i18n', lang);
       this$1.lang = lang;
@@ -1655,10 +1667,7 @@ var QActionSheet = {
     title: String,
     grid: Boolean,
     actions: Array,
-    dismissLabel: {
-      type: String,
-      default: 'Cancel'
-    }
+    dismissLabel: String
   },
   computed: {
     contentCss: function contentCss () {
@@ -5698,21 +5707,62 @@ var QContextMenu = {
   }
 };
 
+var modelValidator = function (v) {
+  var type = typeof v;
+  return (
+    v === null || v === undefined ||
+    type === 'number' || type === 'string' ||
+    isDate(v)
+  )
+};
+
+var inline = {
+  value: {
+    validator: modelValidator,
+    required: true
+  },
+  type: {
+    type: String,
+    default: 'date',
+    validator: function validator (value) {
+      return ['date', 'time', 'datetime'].includes(value)
+    }
+  },
+  color: {
+    type: String,
+    default: 'primary'
+  },
+  min: {
+    validator: modelValidator,
+    default: null
+  },
+  max: {
+    validator: modelValidator,
+    default: null
+  },
+  firstDayOfWeek: Number,
+  format24h: {
+    type: [Boolean, Number],
+    default: 0,
+    validator: function (v) { return [true, false, 0].includes(v); }
+  }
+};
+
+var input = {
+  format: String,
+  noClear: Boolean,
+  placeholder: String,
+  clearLabel: String,
+  okLabel: String,
+  cancelLabel: String
+};
+
 /* eslint no-fallthrough: 0 */
 
 var MILLISECONDS_IN_DAY = 86400000;
 var MILLISECONDS_IN_HOUR = 3600000;
 var MILLISECONDS_IN_MINUTE = 60000;
 var token = /d{1,4}|M{1,4}|m{1,2}|w{1,2}|Qo|Do|D{1,4}|YY(?:YY)?|H{1,2}|h{1,2}|s{1,2}|S{1,3}|Z{1,2}|a{1,2}|[AQExX]/g;
-
-var dayNames = [
-  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-];
-
-var monthNames = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
 
 function formatTimezone (offset, delimeter) {
   if ( delimeter === void 0 ) delimeter = '';
@@ -6038,14 +6088,12 @@ var formatter = {
 
   // Month Short Name: Jan, Feb, ...
   MMM: function MMM (date) {
-    return this.MMMM(date).slice(0, 3)
+    return i18n.lang.date.monthsShort[date.getMonth()]
   },
 
   // Month Name: January, February, ...
-  MMMM: function MMMM (date, opts) {
-    if ( opts === void 0 ) opts = {};
-
-    return (opts.monthNames || monthNames)[date.getMonth()]
+  MMMM: function MMMM (date) {
+    return i18n.lang.date.months[date.getMonth()]
   },
 
   // Quarter: 1, 2, 3, 4
@@ -6095,14 +6143,12 @@ var formatter = {
 
   // Day of week: Sun, Mon, ...
   ddd: function ddd (date) {
-    return this.dddd(date).slice(0, 3)
+    return i18n.lang.date.daysShort[date.getDay()]
   },
 
   // Day of week: Sunday, Monday, ...
-  dddd: function dddd (date, opts) {
-    if ( opts === void 0 ) opts = {};
-
-    return (opts.dayNames || dayNames)[date.getDay()]
+  dddd: function dddd (date) {
+    return i18n.lang.date.days[date.getDay()]
   },
 
   // Day of ISO week: 1, 2, ..., 7
@@ -6218,7 +6264,7 @@ var formatter = {
   }
 };
 
-function formatDate (val, mask, opts) {
+function formatDate (val, mask) {
   if ( mask === void 0 ) mask = 'YYYY-MM-DDTHH:mm:ss.SSSZ';
 
   if (!val) {
@@ -6229,7 +6275,7 @@ function formatDate (val, mask, opts) {
 
   return mask.replace(token, function (match) {
     if (match in formatter) {
-      return formatter[match](date, opts)
+      return formatter[match](date)
     }
     return match
   })
@@ -6237,8 +6283,6 @@ function formatDate (val, mask, opts) {
 
 
 var date = Object.freeze({
-	dayNames: dayNames,
-	monthNames: monthNames,
 	isValid: isValid,
 	buildDate: buildDate,
 	getDayOfWeek: getDayOfWeek,
@@ -6260,70 +6304,6 @@ var date = Object.freeze({
 	formatter: formatter,
 	formatDate: formatDate
 });
-
-var modelValidator = function (v) {
-  var type = typeof v;
-  return (
-    v === null || v === undefined ||
-    type === 'number' || type === 'string' ||
-    isDate(v)
-  )
-};
-
-var inline = {
-  value: {
-    validator: modelValidator,
-    required: true
-  },
-  type: {
-    type: String,
-    default: 'date',
-    validator: function validator (value) {
-      return ['date', 'time', 'datetime'].includes(value)
-    }
-  },
-  color: {
-    type: String,
-    default: 'primary'
-  },
-  min: {
-    validator: modelValidator,
-    default: null
-  },
-  max: {
-    validator: modelValidator,
-    default: null
-  },
-  monthNames: {
-    type: Array,
-    default: function () { return monthNames; }
-  },
-  dayNames: {
-    type: Array,
-    default: function () { return dayNames; }
-  },
-  mondayFirst: Boolean,
-  saturdayFirst: Boolean,
-  format24h: Boolean
-};
-
-var input = {
-  format: String,
-  noClear: Boolean,
-  placeholder: String,
-  clearLabel: {
-    type: String,
-    default: 'Clear'
-  },
-  okLabel: {
-    type: String,
-    default: 'Set'
-  },
-  cancelLabel: {
-    type: String,
-    default: 'Cancel'
-  }
-};
 
 var DateMixin = {
   props: inline,
@@ -6451,7 +6431,7 @@ function convertToAmPm (hour) {
   return hour === 0 ? 12 : (hour >= 13 ? hour - 12 : hour)
 }
 
-var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-datetime inline row",class:_vm.classes},[_c('div',{staticClass:"q-datetime-header column col-xs-12 col-md-4 justify-center"},[(_vm.typeHasDate)?_c('div',[_c('div',{staticClass:"q-datetime-weekdaystring col-12"},[_vm._v(_vm._s(_vm.weekDayString))]),_vm._v(" "),_c('div',{staticClass:"q-datetime-datestring row flex-center"},[_c('span',{staticClass:"q-datetime-link small col-auto col-md-12",class:{active: _vm.view === 'month'},on:{"click":function($event){_vm.view = 'month';}}},[_vm._v(" "+_vm._s(_vm.monthString)+" ")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'day'},on:{"click":function($event){_vm.view = 'day';}}},[_vm._v(" "+_vm._s(_vm.day)+" ")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link small col-auto col-md-12",class:{active: _vm.view === 'year'},on:{"click":function($event){_vm.view = 'year';}}},[_vm._v(" "+_vm._s(_vm.year)+" ")])])]):_vm._e(),_vm._v(" "),(_vm.typeHasTime)?_c('div',{staticClass:"q-datetime-time row flex-center"},[_c('div',{staticClass:"q-datetime-clockstring col-auto col-md-12"},[_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'hour'},on:{"click":function($event){_vm.view = 'hour';}}},[_vm._v(" "+_vm._s(_vm.__pad(_vm.hour, '  '))+" ")]),_vm._v(" "),_c('span',{staticStyle:{"opacity":"0.6"}},[_vm._v(":")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'minute'},on:{"click":function($event){_vm.view = 'minute';}}},[_vm._v(" "+_vm._s(_vm.__pad(_vm.minute))+" ")])]),_vm._v(" "),(!_vm.format24h)?_c('div',{staticClass:"q-datetime-ampm column col-auto col-md-12 justify-around"},[_c('div',{staticClass:"q-datetime-link",class:{active: _vm.am},on:{"click":function($event){_vm.toggleAmPm();}}},[_vm._v("AM")]),_vm._v(" "),_c('div',{staticClass:"q-datetime-link",class:{active: !_vm.am},on:{"click":function($event){_vm.toggleAmPm();}}},[_vm._v("PM")])]):_vm._e()]):_vm._e()]),_vm._v(" "),_c('div',{staticClass:"q-datetime-content col-xs-12 col-md-8 column"},[_c('div',{ref:"selector",staticClass:"q-datetime-selector auto row flex-center"},[(_vm.view === 'year')?_c('div',{staticClass:"q-datetime-view-year full-width full-height"},_vm._l((_vm.yearInterval),function(n){return _c('q-btn',{key:n,staticClass:"q-datetime-btn full-width",class:{active: n + _vm.yearMin === _vm.year},attrs:{"flat":""},on:{"click":function($event){_vm.setYear(n + _vm.yearMin);}}},[_vm._v(" "+_vm._s(n + _vm.yearMin)+" ")])})):_vm._e(),_vm._v(" "),(_vm.view === 'month')?_c('div',{staticClass:"q-datetime-view-month full-width full-height"},_vm._l((_vm.monthInterval),function(index){return _c('q-btn',{key:index,staticClass:"q-datetime-btn full-width",class:{active: _vm.month === index + _vm.monthMin},attrs:{"flat":""},on:{"click":function($event){_vm.setMonth(index + _vm.monthMin, true);}}},[_vm._v(" "+_vm._s(_vm.monthNames[index + _vm.monthMin - 1])+" ")])})):_vm._e(),_vm._v(" "),(_vm.view === 'day')?_c('div',{staticClass:"q-datetime-view-day"},[_c('div',{staticClass:"row items-center content-center"},[_c('q-btn',{attrs:{"round":"","small":"","flat":"","color":_vm.color,"disabled":_vm.beforeMinDays,"icon":"keyboard_arrow_left"},on:{"click":function($event){_vm.setMonth(_vm.month - 1);}}}),_vm._v(" "),_c('div',{staticClass:"col q-datetime-dark"},[_vm._v(" "+_vm._s(_vm.monthStamp)+" ")]),_vm._v(" "),_c('q-btn',{attrs:{"round":"","small":"","flat":"","color":_vm.color,"disabled":_vm.afterMaxDays,"icon":"keyboard_arrow_right"},on:{"click":function($event){_vm.setMonth(_vm.month + 1);}}})],1),_vm._v(" "),_c('div',{staticClass:"q-datetime-weekdays row items-center justify-start"},_vm._l((_vm.headerDayNames),function(day){return _c('div',[_vm._v(_vm._s(day))])})),_vm._v(" "),_c('div',{staticClass:"q-datetime-days row wrap items-center justify-start content-center"},[_vm._l((_vm.fillerDays),function(fillerDay){return _c('div',{staticClass:"q-datetime-fillerday"})}),_vm._v(" "),_vm._l((_vm.beforeMinDays),function(fillerDay){return (_vm.min)?_c('div',{staticClass:"row items-center content-center justify-center disabled"},[_vm._v(" "+_vm._s(fillerDay)+" ")]):_vm._e()}),_vm._v(" "),_vm._l((_vm.daysInterval),function(monthDay){return _c('div',{staticClass:"row items-center content-center justify-center cursor-pointer",class:{ 'q-datetime-day-active': monthDay === _vm.day, 'q-datetime-day-today': monthDay === _vm.today },on:{"click":function($event){_vm.setDay(monthDay);}}},[_c('span',[_vm._v(_vm._s(monthDay))])])}),_vm._v(" "),_vm._l((_vm.afterMaxDays),function(fillerDay){return (_vm.max)?_c('div',{staticClass:"row items-center content-center justify-center disabled"},[_vm._v(" "+_vm._s(fillerDay + _vm.maxDay)+" ")]):_vm._e()})],2)]):_vm._e(),_vm._v(" "),(_vm.view === 'hour' || _vm.view === 'minute')?_c('div',{ref:"clock",staticClass:"column items-center content-center justify-center"},[(_vm.view === 'hour')?_c('div',{staticClass:"q-datetime-clock cursor-pointer",on:{"mousedown":_vm.__dragStart,"mousemove":_vm.__dragMove,"mouseup":_vm.__dragStop,"touchstart":_vm.__dragStart,"touchmove":_vm.__dragMove,"touchend":_vm.__dragStop}},[_c('div',{staticClass:"q-datetime-clock-circle full-width full-height"},[_c('div',{staticClass:"q-datetime-clock-center"}),_vm._v(" "),_c('div',{staticClass:"q-datetime-clock-pointer",style:(_vm.clockPointerStyle)},[_c('span')]),_vm._v(" "),(_vm.format24h)?_c('div',_vm._l((24),function(n){return _c('div',{staticClass:"q-datetime-clock-position fmt24",class:[("q-datetime-clock-pos-" + (n-1)), (n - 1) === _vm.hour ? 'active' : '']},[_c('span',[_vm._v(_vm._s(n - 1))])])})):_c('div',_vm._l((12),function(n){return _c('div',{staticClass:"q-datetime-clock-position",class:['q-datetime-clock-pos-' + n, n === _vm.hour ? 'active' : '']},[_c('span',[_vm._v(_vm._s(n))])])}))])]):_vm._e(),_vm._v(" "),(_vm.view === 'minute')?_c('div',{staticClass:"q-datetime-clock cursor-pointer",on:{"mousedown":_vm.__dragStart,"mousemove":_vm.__dragMove,"mouseup":_vm.__dragStop,"touchstart":_vm.__dragStart,"touchmove":_vm.__dragMove,"touchend":_vm.__dragStop}},[_c('div',{staticClass:"q-datetime-clock-circle full-width full-height"},[_c('div',{staticClass:"q-datetime-clock-center"}),_vm._v(" "),_c('div',{staticClass:"q-datetime-clock-pointer",style:(_vm.clockPointerStyle)},[_c('span')]),_vm._v(" "),_vm._l((12),function(n){return _c('div',{staticClass:"q-datetime-clock-position",class:['q-datetime-clock-pos-' + (n - 1), (n - 1) * 5 === _vm.minute ? 'active' : '']},[_c('span',[_vm._v(_vm._s((n - 1) * 5))])])})],2)]):_vm._e()]):_vm._e()]),_vm._v(" "),_vm._t("default")],2)])},staticRenderFns: [],
+var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-datetime inline row",class:_vm.classes},[_c('div',{staticClass:"q-datetime-header column col-xs-12 col-md-4 justify-center"},[(_vm.typeHasDate)?_c('div',[_c('div',{staticClass:"q-datetime-weekdaystring col-12"},[_vm._v(_vm._s(_vm.weekDayString))]),_vm._v(" "),_c('div',{staticClass:"q-datetime-datestring row flex-center"},[_c('span',{staticClass:"q-datetime-link small col-auto col-md-12",class:{active: _vm.view === 'month'},on:{"click":function($event){_vm.view = 'month';}}},[_vm._v(" "+_vm._s(_vm.monthString)+" ")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'day'},on:{"click":function($event){_vm.view = 'day';}}},[_vm._v(" "+_vm._s(_vm.day)+" ")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link small col-auto col-md-12",class:{active: _vm.view === 'year'},on:{"click":function($event){_vm.view = 'year';}}},[_vm._v(" "+_vm._s(_vm.year)+" ")])])]):_vm._e(),_vm._v(" "),(_vm.typeHasTime)?_c('div',{staticClass:"q-datetime-time row flex-center"},[_c('div',{staticClass:"q-datetime-clockstring col-auto col-md-12"},[_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'hour'},on:{"click":function($event){_vm.view = 'hour';}}},[_vm._v(" "+_vm._s(_vm.__pad(_vm.hour, '  '))+" ")]),_vm._v(" "),_c('span',{staticStyle:{"opacity":"0.6"}},[_vm._v(":")]),_vm._v(" "),_c('span',{staticClass:"q-datetime-link col-auto col-md-12",class:{active: _vm.view === 'minute'},on:{"click":function($event){_vm.view = 'minute';}}},[_vm._v(" "+_vm._s(_vm.__pad(_vm.minute))+" ")])]),_vm._v(" "),(!_vm.computedFormat24h)?_c('div',{staticClass:"q-datetime-ampm column col-auto col-md-12 justify-around"},[_c('div',{staticClass:"q-datetime-link",class:{active: _vm.am},on:{"click":function($event){_vm.toggleAmPm();}}},[_vm._v("AM")]),_vm._v(" "),_c('div',{staticClass:"q-datetime-link",class:{active: !_vm.am},on:{"click":function($event){_vm.toggleAmPm();}}},[_vm._v("PM")])]):_vm._e()]):_vm._e()]),_vm._v(" "),_c('div',{staticClass:"q-datetime-content col-xs-12 col-md-8 column"},[_c('div',{ref:"selector",staticClass:"q-datetime-selector auto row flex-center"},[(_vm.view === 'year')?_c('div',{staticClass:"q-datetime-view-year full-width full-height"},_vm._l((_vm.yearInterval),function(n){return _c('q-btn',{key:n,staticClass:"q-datetime-btn full-width",class:{active: n + _vm.yearMin === _vm.year},attrs:{"flat":""},on:{"click":function($event){_vm.setYear(n + _vm.yearMin);}}},[_vm._v(" "+_vm._s(n + _vm.yearMin)+" ")])})):_vm._e(),_vm._v(" "),(_vm.view === 'month')?_c('div',{staticClass:"q-datetime-view-month full-width full-height"},_vm._l((_vm.monthInterval),function(index){return _c('q-btn',{key:index,staticClass:"q-datetime-btn full-width",class:{active: _vm.month === index + _vm.monthMin},attrs:{"flat":""},on:{"click":function($event){_vm.setMonth(index + _vm.monthMin, true);}}},[_vm._v(" "+_vm._s(_vm.$q.i18n.date.months[index + _vm.monthMin - 1])+" ")])})):_vm._e(),_vm._v(" "),(_vm.view === 'day')?_c('div',{staticClass:"q-datetime-view-day"},[_c('div',{staticClass:"row items-center content-center"},[_c('q-btn',{attrs:{"round":"","small":"","flat":"","color":_vm.color,"disabled":_vm.beforeMinDays,"icon":"keyboard_arrow_left"},on:{"click":function($event){_vm.setMonth(_vm.month - 1);}}}),_vm._v(" "),_c('div',{staticClass:"col q-datetime-dark"},[_vm._v(" "+_vm._s(_vm.monthStamp)+" ")]),_vm._v(" "),_c('q-btn',{attrs:{"round":"","small":"","flat":"","color":_vm.color,"disabled":_vm.afterMaxDays,"icon":"keyboard_arrow_right"},on:{"click":function($event){_vm.setMonth(_vm.month + 1);}}})],1),_vm._v(" "),_c('div',{staticClass:"q-datetime-weekdays row items-center justify-start"},_vm._l((_vm.headerDayNames),function(day){return _c('div',[_vm._v(_vm._s(day))])})),_vm._v(" "),_c('div',{staticClass:"q-datetime-days row wrap items-center justify-start content-center"},[_vm._l((_vm.fillerDays),function(fillerDay){return _c('div',{staticClass:"q-datetime-fillerday"})}),_vm._v(" "),_vm._l((_vm.beforeMinDays),function(fillerDay){return (_vm.min)?_c('div',{staticClass:"row items-center content-center justify-center disabled"},[_vm._v(" "+_vm._s(fillerDay)+" ")]):_vm._e()}),_vm._v(" "),_vm._l((_vm.daysInterval),function(monthDay){return _c('div',{staticClass:"row items-center content-center justify-center cursor-pointer",class:{ 'q-datetime-day-active': monthDay === _vm.day, 'q-datetime-day-today': monthDay === _vm.today },on:{"click":function($event){_vm.setDay(monthDay);}}},[_c('span',[_vm._v(_vm._s(monthDay))])])}),_vm._v(" "),_vm._l((_vm.afterMaxDays),function(fillerDay){return (_vm.max)?_c('div',{staticClass:"row items-center content-center justify-center disabled"},[_vm._v(" "+_vm._s(fillerDay + _vm.maxDay)+" ")]):_vm._e()})],2)]):_vm._e(),_vm._v(" "),(_vm.view === 'hour' || _vm.view === 'minute')?_c('div',{ref:"clock",staticClass:"column items-center content-center justify-center"},[(_vm.view === 'hour')?_c('div',{staticClass:"q-datetime-clock cursor-pointer",on:{"mousedown":_vm.__dragStart,"mousemove":_vm.__dragMove,"mouseup":_vm.__dragStop,"touchstart":_vm.__dragStart,"touchmove":_vm.__dragMove,"touchend":_vm.__dragStop}},[_c('div',{staticClass:"q-datetime-clock-circle full-width full-height"},[_c('div',{staticClass:"q-datetime-clock-center"}),_vm._v(" "),_c('div',{staticClass:"q-datetime-clock-pointer",style:(_vm.clockPointerStyle)},[_c('span')]),_vm._v(" "),(_vm.computedFormat24h)?_c('div',_vm._l((24),function(n){return _c('div',{staticClass:"q-datetime-clock-position fmt24",class:[("q-datetime-clock-pos-" + (n-1)), (n - 1) === _vm.hour ? 'active' : '']},[_c('span',[_vm._v(_vm._s(n - 1))])])})):_c('div',_vm._l((12),function(n){return _c('div',{staticClass:"q-datetime-clock-position",class:['q-datetime-clock-pos-' + n, n === _vm.hour ? 'active' : '']},[_c('span',[_vm._v(_vm._s(n))])])}))])]):_vm._e(),_vm._v(" "),(_vm.view === 'minute')?_c('div',{staticClass:"q-datetime-clock cursor-pointer",on:{"mousedown":_vm.__dragStart,"mousemove":_vm.__dragMove,"mouseup":_vm.__dragStop,"touchstart":_vm.__dragStart,"touchmove":_vm.__dragMove,"touchend":_vm.__dragStop}},[_c('div',{staticClass:"q-datetime-clock-circle full-width full-height"},[_c('div',{staticClass:"q-datetime-clock-center"}),_vm._v(" "),_c('div',{staticClass:"q-datetime-clock-pointer",style:(_vm.clockPointerStyle)},[_c('span')]),_vm._v(" "),_vm._l((12),function(n){return _c('div',{staticClass:"q-datetime-clock-position",class:['q-datetime-clock-pos-' + (n - 1), (n - 1) * 5 === _vm.minute ? 'active' : '']},[_c('span',[_vm._v(_vm._s((n - 1) * 5))])])})],2)]):_vm._e()]):_vm._e()]),_vm._v(" "),_vm._t("default")],2)])},staticRenderFns: [],
   name: 'q-inline-datetime',
   mixins: [DateMixin],
   props: {
@@ -6518,15 +6498,20 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
       }
       return cls
     },
-    firstDayOfWeek: function firstDayOfWeek () {
-      return this.mondayFirst
-        ? 1
-        : (this.saturdayFirst ? 6 : 0)
+    computedFormat24h: function computedFormat24h () {
+      return this.format24h !== 0
+        ? this.format24h
+        : this.$q.i18n.date.format24h
+    },
+    computedFirstDayOfWeek: function computedFirstDayOfWeek () {
+      return this.firstDayOfWeek !== void 0
+        ? this.firstDayOfWeek
+        : this.$q.i18n.date.firstDayOfWeek
     },
     headerDayNames: function headerDayNames () {
       var
-        days = this.dayNames.map(function (day) { return day.slice(0, 3); }),
-        first = this.firstDayOfWeek;
+        days = this.$q.i18n.date.daysShort,
+        first = this.computedFirstDayOfWeek;
 
       return first > 0
         ? days.slice(first, 7).concat(days.slice(0, first))
@@ -6534,17 +6519,17 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
     },
 
     monthString: function monthString () {
-      return ("" + (this.monthNames[this.month - 1].slice(0, 3)))
+      return ("" + (this.$q.i18n.date.monthsShort[this.month - 1]))
     },
     monthStamp: function monthStamp () {
-      return ((this.monthNames[this.month - 1]) + " " + (this.year))
+      return ((this.$q.i18n.date.months[this.month - 1]) + " " + (this.year))
     },
     weekDayString: function weekDayString () {
-      return this.dayNames[this.model.getDay()]
+      return this.$q.i18n.date.days[this.model.getDay()]
     },
 
     fillerDays: function fillerDays () {
-      var days = (new Date(this.model.getFullYear(), this.model.getMonth(), 1).getDay() - this.firstDayOfWeek);
+      var days = (new Date(this.model.getFullYear(), this.model.getMonth(), 1).getDay() - this.computedFirstDayOfWeek);
       if (days < 0) {
         days += 7;
       }
@@ -6578,7 +6563,7 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
 
     hour: function hour () {
       var h = this.model.getHours();
-      return this.format24h
+      return this.computedFormat24h
         ? h
         : convertToAmPm(h)
     },
@@ -6590,7 +6575,7 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
     },
     clockPointerStyle: function clockPointerStyle () {
       var
-        divider = this.view === 'minute' ? 60 : (this.format24h ? 24 : 12),
+        divider = this.view === 'minute' ? 60 : (this.computedFormat24h ? 24 : 12),
         degrees = Math.round((this.view === 'minute' ? this.minute : this.hour) * (360 / divider)) - 180;
 
       return cssTransform(("rotate(" + degrees + "deg)"))
@@ -6629,7 +6614,7 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
 
       value = this.__parseTypeValue('hour', value);
 
-      if (!this.format24h && value < 12 && !this.am) {
+      if (!this.computedFormat24h && value < 12 && !this.am) {
         value += 12;
       }
 
@@ -6695,7 +6680,7 @@ var QInlineDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement
       }
 
       if (this.view === 'hour') {
-        this.setHour(Math.round(angle / (this.format24h ? 15 : 30)));
+        this.setHour(Math.round(angle / (this.computedFormat24h ? 15 : 30)));
       }
       else {
         this.setMinute(Math.round(angle / 6));
@@ -6709,7 +6694,7 @@ var contentCSS = {
     maxHeight: '98vh'
   };
 
-var QDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-input-frame',{staticClass:"q-datetime-input",attrs:{"prefix":_vm.prefix,"suffix":_vm.suffix,"stack-label":_vm.stackLabel,"float-label":_vm.floatLabel,"error":_vm.error,"disable":_vm.disable,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"focused":_vm.focused,"focusable":"","length":_vm.actualValue.length},nativeOn:{"click":function($event){_vm.show($event);},"focus":function($event){_vm.__onFocus($event);},"blur":function($event){_vm.__onBlur($event);}}},[_c('div',{staticClass:"col row items-center q-input-target",class:_vm.alignClass,domProps:{"innerHTML":_vm._s(_vm.actualValue)}}),_vm._v(" "),(_vm.usingPopover)?_c('q-popover',{ref:"popup",attrs:{"offset":[0, 10],"disable":_vm.disable,"anchor-click":false,"max-height":"100vh"},on:{"show":_vm.__onFocus,"hide":_vm.__onHide}},[_c('q-inline-datetime',{ref:"target",staticClass:"no-border",attrs:{"default-selection":_vm.defaultSelection,"type":_vm.type,"min":_vm.min,"max":_vm.max,"format24h":_vm.format24h,"monday-first":_vm.mondayFirst,"saturday-first":_vm.saturdayFirst,"month-names":_vm.monthNames,"day-names":_vm.dayNames,"color":_vm.color},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_c('div',{staticClass:"row q-datetime-controls modal-buttons-top"},[(!_vm.noClear && _vm.model)?_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.clearLabel},on:{"click":_vm.clear}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"col"}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.cancelLabel},on:{"click":_vm.hide}}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.okLabel},on:{"click":function($event){_vm.hide(), _vm.__update();}}})],1)])],1):_c('q-modal',{ref:"popup",staticClass:"with-backdrop",class:_vm.classNames,attrs:{"transition":_vm.transition,"position-classes":_vm.position,"content-css":_vm.contentCSS},on:{"show":_vm.__onFocus,"hide":_vm.__onHide}},[_c('q-inline-datetime',{ref:"target",staticClass:"no-border",class:{'full-width': _vm.$q.theme === 'ios'},attrs:{"default-selection":_vm.defaultSelection,"type":_vm.type,"min":_vm.min,"max":_vm.max,"format24h":_vm.format24h,"monday-first":_vm.mondayFirst,"saturday-first":_vm.saturdayFirst,"month-names":_vm.monthNames,"day-names":_vm.dayNames,"color":_vm.color},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_c('div',{staticClass:"modal-buttons modal-buttons-top row full-width"},[(!_vm.noClear && _vm.model)?_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.clearLabel},on:{"click":_vm.clear}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"col"}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.cancelLabel},on:{"click":_vm.hide}}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.okLabel},on:{"click":function($event){_vm.hide(), _vm.__update();}}})],1)])],1),_vm._v(" "),_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"arrow_drop_down"},slot:"after"})],1)},staticRenderFns: [],
+var QDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-input-frame',{staticClass:"q-datetime-input",attrs:{"prefix":_vm.prefix,"suffix":_vm.suffix,"stack-label":_vm.stackLabel,"float-label":_vm.floatLabel,"error":_vm.error,"disable":_vm.disable,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"focused":_vm.focused,"focusable":"","length":_vm.actualValue.length},nativeOn:{"click":function($event){_vm.show($event);},"focus":function($event){_vm.__onFocus($event);},"blur":function($event){_vm.__onBlur($event);}}},[_c('div',{staticClass:"col row items-center q-input-target",class:_vm.alignClass,domProps:{"innerHTML":_vm._s(_vm.actualValue)}}),_vm._v(" "),(_vm.usingPopover)?_c('q-popover',{ref:"popup",attrs:{"offset":[0, 10],"disable":_vm.disable,"anchor-click":false,"max-height":"100vh"},on:{"show":_vm.__onFocus,"hide":_vm.__onHide}},[_c('q-inline-datetime',{ref:"target",staticClass:"no-border",attrs:{"default-selection":_vm.defaultSelection,"type":_vm.type,"min":_vm.min,"max":_vm.max,"format24h":_vm.format24h,"first-day-of-week":_vm.firstDayOfWeek,"color":_vm.color},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_c('div',{staticClass:"row q-datetime-controls modal-buttons-top"},[(!_vm.noClear && _vm.model)?_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.clearLabel || _vm.$q.i18n.label.clear},on:{"click":_vm.clear}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"col"}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.cancelLabel || _vm.$q.i18n.label.cancel},on:{"click":_vm.hide}}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.okLabel || _vm.$q.i18n.label.ok},on:{"click":function($event){_vm.hide(), _vm.__update();}}})],1)])],1):_c('q-modal',{ref:"popup",staticClass:"with-backdrop",class:_vm.classNames,attrs:{"transition":_vm.transition,"position-classes":_vm.position,"content-css":_vm.contentCSS},on:{"show":_vm.__onFocus,"hide":_vm.__onHide}},[_c('q-inline-datetime',{ref:"target",staticClass:"no-border",class:{'full-width': _vm.$q.theme === 'ios'},attrs:{"default-selection":_vm.defaultSelection,"type":_vm.type,"min":_vm.min,"max":_vm.max,"format24h":_vm.format24h,"first-day-of-week":_vm.firstDayOfWeek,"color":_vm.color},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_c('div',{staticClass:"modal-buttons modal-buttons-top row full-width"},[(!_vm.noClear && _vm.model)?_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.clearLabel || _vm.$q.i18n.label.clear},on:{"click":_vm.clear}}):_vm._e(),_vm._v(" "),_c('div',{staticClass:"col"}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.cancelLabel || _vm.$q.i18n.label.cancel},on:{"click":_vm.hide}}),_vm._v(" "),_c('q-btn',{attrs:{"color":_vm.color,"flat":"","wait-for-ripple":"","label":_vm.okLabel || _vm.$q.i18n.label.ok},on:{"click":function($event){_vm.hide(), _vm.__update();}}})],1)])],1),_vm._v(" "),_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"arrow_drop_down"},slot:"after"})],1)},staticRenderFns: [],
   name: 'q-datetime',
   mixins: [FrameMixin],
   components: {
@@ -6765,10 +6750,7 @@ var QDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _
         format = 'YYYY-MM-DD HH:mm:ss';
       }
 
-      return formatDate(this.value, format, {
-        dayNames: this.dayNames,
-        monthNames: this.monthNames
-      })
+      return formatDate(this.value, format, /* for reactiveness */ this.$q.i18n.date)
     }
   },
   methods: {
@@ -6822,7 +6804,7 @@ var QDatetime = {render: function(){var _vm=this;var _h=_vm.$createElement;var _
   }
 };
 
-var QDatetimeRange = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-datetime-range no-wrap",class:_vm.classes},[_c('q-datetime',{staticClass:"col q-datetime-range-left",class:_vm.className,style:(_vm.css),attrs:{"default-selection":_vm.defaultFrom,"type":_vm.type,"min":_vm.min,"max":_vm.value.to || _vm.max,"format":_vm.format,"no-clear":_vm.noClear,"clear-label":_vm.clearLabel,"ok-label":_vm.okLabel,"cancel-label":_vm.cancelLabel,"float-label":_vm.floatLabel,"stack-label":_vm.stackLabel,"placeholder":_vm.placeholder,"disable":_vm.disable,"error":_vm.error,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"align":_vm.align,"format24h":_vm.format24h,"monday-first":_vm.mondayFirst,"saturday-first":_vm.saturdayFirst,"month-names":_vm.monthNames,"day-names":_vm.dayNames},on:{"change":_vm.__onChange},model:{value:(_vm.value.from),callback:function ($$v) {_vm.$set(_vm.value, "from", $$v);},expression:"value.from"}}),_vm._v(" "),_c('q-datetime',{staticClass:"col q-datetime-range-right",class:_vm.className,style:(_vm.css),attrs:{"default-selection":_vm.defaultTo,"type":_vm.type,"min":_vm.value.from || _vm.min,"max":_vm.max,"format":_vm.format,"no-clear":_vm.noClear,"clear-label":_vm.clearLabel,"ok-label":_vm.okLabel,"cancel-label":_vm.cancelLabel,"float-label":_vm.floatLabelTo,"stack-label":_vm.stackLabelTo,"placeholder":_vm.placeholderTo,"disable":_vm.disable,"error":_vm.error,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"align":_vm.align,"format24h":_vm.format24h,"monday-first":_vm.mondayFirst,"saturday-first":_vm.saturdayFirst,"month-names":_vm.monthNames,"day-names":_vm.dayNames},on:{"change":_vm.__onChange},model:{value:(_vm.value.to),callback:function ($$v) {_vm.$set(_vm.value, "to", $$v);},expression:"value.to"}})],1)},staticRenderFns: [],
+var QDatetimeRange = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-datetime-range no-wrap",class:_vm.classes},[_c('q-datetime',{staticClass:"col q-datetime-range-left",class:_vm.className,style:(_vm.css),attrs:{"default-selection":_vm.defaultFrom,"type":_vm.type,"min":_vm.min,"max":_vm.value.to || _vm.max,"format":_vm.format,"no-clear":_vm.noClear,"clear-label":_vm.clearLabel,"ok-label":_vm.okLabel,"cancel-label":_vm.cancelLabel,"float-label":_vm.floatLabel,"stack-label":_vm.stackLabel,"placeholder":_vm.placeholder,"disable":_vm.disable,"error":_vm.error,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"align":_vm.align,"format24h":_vm.format24h,"first-day-of-week":_vm.firstDayOfWeek},on:{"change":_vm.__onChange},model:{value:(_vm.value.from),callback:function ($$v) {_vm.$set(_vm.value, "from", $$v);},expression:"value.from"}}),_vm._v(" "),_c('q-datetime',{staticClass:"col q-datetime-range-right",class:_vm.className,style:(_vm.css),attrs:{"default-selection":_vm.defaultTo,"type":_vm.type,"min":_vm.value.from || _vm.min,"max":_vm.max,"format":_vm.format,"no-clear":_vm.noClear,"clear-label":_vm.clearLabel,"ok-label":_vm.okLabel,"cancel-label":_vm.cancelLabel,"float-label":_vm.floatLabelTo,"stack-label":_vm.stackLabelTo,"placeholder":_vm.placeholderTo,"disable":_vm.disable,"error":_vm.error,"inverted":_vm.inverted,"dark":_vm.dark,"before":_vm.before,"after":_vm.after,"color":_vm.color,"align":_vm.align,"format24h":_vm.format24h,"first-day-of-week":_vm.firstDayOfWeek},on:{"change":_vm.__onChange},model:{value:(_vm.value.to),callback:function ($$v) {_vm.$set(_vm.value, "to", $$v);},expression:"value.to"}})],1)},staticRenderFns: [],
   name: 'q-datetime-range',
   mixins: [FrameMixin],
   components: {
@@ -8095,7 +8077,7 @@ function getToolbar (h, vm) {
   }
 }
 
-function getFonts (defaultFont, fonts) {
+function getFonts (defaultFont, defaultFontLabel, fonts) {
   if ( fonts === void 0 ) fonts = {};
 
   var aliases = Object.keys(fonts);
@@ -8108,7 +8090,7 @@ function getFonts (defaultFont, fonts) {
       cmd: 'fontName',
       param: defaultFont,
       icon: 'font_download',
-      tip: 'Default Font'
+      tip: defaultFontLabel
     }
   };
 
@@ -8125,50 +8107,6 @@ function getFonts (defaultFont, fonts) {
 
   return def
 }
-
-var buttons = {
-  bold: {cmd: 'bold', icon: 'format_bold', tip: 'Bold', key: 66},
-  italic: {cmd: 'italic', icon: 'format_italic', tip: 'Italic', key: 73},
-  strike: {cmd: 'strikeThrough', icon: 'strikethrough_s', tip: 'Strikethrough', key: 83},
-  underline: {cmd: 'underline', icon: 'format_underlined', tip: 'Underline', key: 85},
-  unordered: {cmd: 'insertUnorderedList', icon: 'format_list_bulleted', tip: 'Unordered List'},
-  ordered: {cmd: 'insertOrderedList', icon: 'format_list_numbered', tip: 'Ordered List'},
-  subscript: {cmd: 'subscript', icon: 'vertical_align_bottom', tip: 'Subscript', htmlTip: 'x<subscript>2</subscript>'},
-  superscript: {cmd: 'superscript', icon: 'vertical_align_top', tip: 'Superscript', htmlTip: 'x<superscript>2</superscript>'},
-  link: {cmd: 'link', icon: 'link', tip: 'Hyperlink', key: 76},
-  fullscreen: {cmd: 'fullscreen', icon: 'fullscreen', tip: 'Toggle Fullscreen', key: 70},
-
-  quote: {cmd: 'formatBlock', param: 'BLOCKQUOTE', icon: 'format_quote', tip: 'Quote', key: 81},
-  left: {cmd: 'justifyLeft', icon: 'format_align_left', tip: 'Left align'},
-  center: {cmd: 'justifyCenter', icon: 'format_align_center', tip: 'Center align'},
-  right: {cmd: 'justifyRight', icon: 'format_align_right', tip: 'Right align'},
-  justify: {cmd: 'justifyFull', icon: 'format_align_justify', tip: 'Justify align'},
-
-  print: {type: 'no-state', cmd: 'print', icon: 'print', tip: 'Print', key: 80},
-  outdent: {type: 'no-state', disable: function (vm) { return vm.caret && !vm.caret.can('outdent'); }, cmd: 'outdent', icon: 'format_indent_decrease', tip: 'Decrease indentation'},
-  indent: {type: 'no-state', disable: function (vm) { return vm.caret && !vm.caret.can('indent'); }, cmd: 'indent', icon: 'format_indent_increase', tip: 'Increase indentation'},
-  removeFormat: {type: 'no-state', cmd: 'removeFormat', icon: 'format_clear', tip: 'Remove formatting'},
-  hr: {type: 'no-state', cmd: 'insertHorizontalRule', icon: 'remove', tip: 'Insert Horizontal Rule'},
-  undo: {type: 'no-state', cmd: 'undo', icon: 'undo', tip: 'Undo', key: 90},
-  redo: {type: 'no-state', cmd: 'redo', icon: 'redo', tip: 'Redo', key: 89},
-
-  h1: {cmd: 'formatBlock', param: 'H1', icon: 'format_size', tip: 'Header 1', htmlTip: '<h1>Header 1</h1>'},
-  h2: {cmd: 'formatBlock', param: 'H2', icon: 'format_size', tip: 'Header 2', htmlTip: '<h2>Header 2</h2>'},
-  h3: {cmd: 'formatBlock', param: 'H3', icon: 'format_size', tip: 'Header 3', htmlTip: '<h3>Header 3</h3>'},
-  h4: {cmd: 'formatBlock', param: 'H4', icon: 'format_size', tip: 'Header 4', htmlTip: '<h4>Header 4</h4>'},
-  h5: {cmd: 'formatBlock', param: 'H5', icon: 'format_size', tip: 'Header 5', htmlTip: '<h5>Header 5</h5>'},
-  h6: {cmd: 'formatBlock', param: 'H6', icon: 'format_size', tip: 'Header 6', htmlTip: '<h6>Header 6</h6>'},
-  p: {cmd: 'formatBlock', param: 'DIV', icon: 'format_size', tip: 'Paragraph'},
-  code: {cmd: 'formatBlock', param: 'PRE', icon: 'code', tip: '<code>Code</code>'},
-
-  'size-1': {cmd: 'fontSize', param: '1', icon: 'filter_1', tip: 'Very small', htmlTip: '<font size="1">Very small</font>'},
-  'size-2': {cmd: 'fontSize', param: '2', icon: 'filter_2', tip: 'A bit small', htmlTip: '<font size="2">A bit small</font>'},
-  'size-3': {cmd: 'fontSize', param: '3', icon: 'filter_3', tip: 'Normal', htmlTip: '<font size="3">Normal</font>'},
-  'size-4': {cmd: 'fontSize', param: '4', icon: 'filter_4', tip: 'Medium-large', htmlTip: '<font size="4">Medium-large</font>'},
-  'size-5': {cmd: 'fontSize', param: '5', icon: 'filter_5', tip: 'Big', htmlTip: '<font size="5">Big</font>'},
-  'size-6': {cmd: 'fontSize', param: '6', icon: 'filter_6', tip: 'Very big', htmlTip: '<font size="6">Very big</font>'},
-  'size-7': {cmd: 'fontSize', param: '7', icon: 'filter_7', tip: 'Maximum', htmlTip: '<font size="7">Maximum</font>'}
-};
 
 function getBlockElement (el, parent) {
   if (parent && el === parent) {
@@ -8473,10 +8411,57 @@ var QEditor = {
         compact: true
       }
     },
-    buttons: function buttons$1 () {
+    buttonDef: function buttonDef () {
+      var e = this.$q.i18n.editor;
+
+      return {
+        bold: {cmd: 'bold', icon: 'format_bold', tip: e.bold, key: 66},
+        italic: {cmd: 'italic', icon: 'format_italic', tip: e.italic, key: 73},
+        strike: {cmd: 'strikeThrough', icon: 'strikethrough_s', tip: e.strikethrough, key: 83},
+        underline: {cmd: 'underline', icon: 'format_underlined', tip: e.underline, key: 85},
+        unordered: {cmd: 'insertUnorderedList', icon: 'format_list_bulleted', tip: e.unorderedList},
+        ordered: {cmd: 'insertOrderedList', icon: 'format_list_numbered', tip: e.orderedList},
+        subscript: {cmd: 'subscript', icon: 'vertical_align_bottom', tip: e.subscript, htmlTip: 'x<subscript>2</subscript>'},
+        superscript: {cmd: 'superscript', icon: 'vertical_align_top', tip: e.superscript, htmlTip: 'x<superscript>2</superscript>'},
+        link: {cmd: 'link', icon: 'link', tip: e.hyperlink, key: 76},
+        fullscreen: {cmd: 'fullscreen', icon: 'fullscreen', tip: e.toggleFullscreen, key: 70},
+
+        quote: {cmd: 'formatBlock', param: 'BLOCKQUOTE', icon: 'format_quote', tip: e.quote, key: 81},
+        left: {cmd: 'justifyLeft', icon: 'format_align_left', tip: e.left},
+        center: {cmd: 'justifyCenter', icon: 'format_align_center', tip: e.center},
+        right: {cmd: 'justifyRight', icon: 'format_align_right', tip: e.right},
+        justify: {cmd: 'justifyFull', icon: 'format_align_justify', tip: e.justify},
+
+        print: {type: 'no-state', cmd: 'print', icon: 'print', tip: e.print, key: 80},
+        outdent: {type: 'no-state', disable: function (vm) { return vm.caret && !vm.caret.can('outdent'); }, cmd: 'outdent', icon: 'format_indent_decrease', tip: e.outdent},
+        indent: {type: 'no-state', disable: function (vm) { return vm.caret && !vm.caret.can('indent'); }, cmd: 'indent', icon: 'format_indent_increase', tip: e.indent},
+        removeFormat: {type: 'no-state', cmd: 'removeFormat', icon: 'format_clear', tip: e.removeFormat},
+        hr: {type: 'no-state', cmd: 'insertHorizontalRule', icon: 'remove', tip: e.hr},
+        undo: {type: 'no-state', cmd: 'undo', icon: 'undo', tip: e.undo, key: 90},
+        redo: {type: 'no-state', cmd: 'redo', icon: 'redo', tip: e.redo, key: 89},
+
+        h1: {cmd: 'formatBlock', param: 'H1', icon: 'format_size', tip: e.header1, htmlTip: ("<h1>" + (e.header1) + "</h1>")},
+        h2: {cmd: 'formatBlock', param: 'H2', icon: 'format_size', tip: e.header2, htmlTip: ("<h2>" + (e.header2) + "</h2>")},
+        h3: {cmd: 'formatBlock', param: 'H3', icon: 'format_size', tip: e.header3, htmlTip: ("<h3>" + (e.header3) + "</h3>")},
+        h4: {cmd: 'formatBlock', param: 'H4', icon: 'format_size', tip: e.header4, htmlTip: ("<h4>" + (e.header4) + "</h4>")},
+        h5: {cmd: 'formatBlock', param: 'H5', icon: 'format_size', tip: e.header5, htmlTip: ("<h5>" + (e.header5) + "</h5>")},
+        h6: {cmd: 'formatBlock', param: 'H6', icon: 'format_size', tip: e.header6, htmlTip: ("<h6>" + (e.header6) + "</h6>")},
+        p: {cmd: 'formatBlock', param: 'DIV', icon: 'format_size', tip: e.paragraph},
+        code: {cmd: 'formatBlock', param: 'PRE', icon: 'code', tip: ("<code>" + (e.code) + "</code>")},
+
+        'size-1': {cmd: 'fontSize', param: '1', icon: 'filter_1', tip: e.size1, htmlTip: ("<font size=\"1\">" + (e.size1) + "</font>")},
+        'size-2': {cmd: 'fontSize', param: '2', icon: 'filter_2', tip: e.size2, htmlTip: ("<font size=\"2\">" + (e.size2) + "</font>")},
+        'size-3': {cmd: 'fontSize', param: '3', icon: 'filter_3', tip: e.size3, htmlTip: ("<font size=\"3\">" + (e.size3) + "</font>")},
+        'size-4': {cmd: 'fontSize', param: '4', icon: 'filter_4', tip: e.size4, htmlTip: ("<font size=\"4\">" + (e.size4) + "</font>")},
+        'size-5': {cmd: 'fontSize', param: '5', icon: 'filter_5', tip: e.size5, htmlTip: ("<font size=\"5\">" + (e.size5) + "</font>")},
+        'size-6': {cmd: 'fontSize', param: '6', icon: 'filter_6', tip: e.size6, htmlTip: ("<font size=\"6\">" + (e.size6) + "</font>")},
+        'size-7': {cmd: 'fontSize', param: '7', icon: 'filter_7', tip: e.size7, htmlTip: ("<font size=\"7\">" + (e.size7) + "</font>")}
+      }
+    },
+    buttons: function buttons () {
       var def = this.definitions || this.fonts
-        ? extend(true, {}, buttons, this.definitions || {}, getFonts(this.defaultFont, this.fonts))
-        : buttons;
+        ? extend(true, {}, this.buttonDef, this.definitions || {}, getFonts(this.defaultFont, this.$q.i18n.editor.defaultFont, this.fonts))
+        : this.buttonDef;
 
       return this.toolbar.map(
         function (group) { return group.map(function (token) {
@@ -10407,18 +10392,9 @@ var QPullToRefresh = {
       type: Number,
       default: 35
     },
-    pullMessage: {
-      type: String,
-      default: 'Pull down to refresh'
-    },
-    releaseMessage: {
-      type: String,
-      default: 'Release to refresh'
-    },
-    refreshMessage: {
-      type: String,
-      default: 'Refreshing...'
-    },
+    pullMessage: String,
+    releaseMessage: String,
+    refreshMessage: String,
     refreshIcon: {
       type: String,
       default: 'refresh'
@@ -10442,12 +10418,12 @@ var QPullToRefresh = {
     message: function message () {
       switch (this.state) {
         case 'pulled':
-          return this.releaseMessage
+          return this.releaseMessage || this.$q.i18n.label.pullToRefresh.release
         case 'refreshing':
-          return this.refreshMessage
+          return this.refreshMessage || this.$q.i18n.label.pullToRefresh.refresh
         case 'pull':
         default:
-          return this.pullMessage
+          return this.pullMessage || this.$q.i18n.label.pullToRefresh.pull
       }
     },
     style: function style$$1 () {
@@ -11169,7 +11145,7 @@ var QScrollArea = {render: function(){var _vm=this;var _h=_vm.$createElement;var
   }
 };
 
-var QSearch = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-input',{ref:"input",staticClass:"q-search",attrs:{"type":_vm.type,"autofocus":_vm.autofocus,"placeholder":_vm.placeholder,"disable":_vm.disable,"error":_vm.error,"align":_vm.align,"float-label":_vm.floatLabel,"stack-label":_vm.stackLabel,"prefix":_vm.prefix,"suffix":_vm.suffix,"inverted":_vm.inverted,"dark":_vm.dark,"max-length":_vm.maxLength,"color":_vm.color,"before":_vm.controlBefore,"after":_vm.controlAfter},on:{"focus":_vm.__onFocus,"blur":_vm.__onBlur,"keyup":_vm.__onKeyup,"keydown":_vm.__onKeydown,"click":_vm.__onClick},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_vm._t("default")],2)},staticRenderFns: [],
+var QSearch = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('q-input',{ref:"input",staticClass:"q-search",attrs:{"type":_vm.type,"autofocus":_vm.autofocus,"placeholder":_vm.placeholder || _vm.$q.i18n.label.search,"disable":_vm.disable,"error":_vm.error,"align":_vm.align,"float-label":_vm.floatLabel,"stack-label":_vm.stackLabel,"prefix":_vm.prefix,"suffix":_vm.suffix,"inverted":_vm.inverted,"dark":_vm.dark,"max-length":_vm.maxLength,"color":_vm.color,"before":_vm.controlBefore,"after":_vm.controlAfter},on:{"focus":_vm.__onFocus,"blur":_vm.__onBlur,"keyup":_vm.__onKeyup,"keydown":_vm.__onKeydown,"click":_vm.__onClick},model:{value:(_vm.model),callback:function ($$v) {_vm.model=$$v;},expression:"model"}},[_vm._t("default")],2)},staticRenderFns: [],
   name: 'q-search',
   mixins: [FrameMixin, InputMixin],
   components: {
@@ -11190,10 +11166,7 @@ var QSearch = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=
       type: String,
       default: 'search'
     },
-    placeholder: {
-      type: String,
-      default: 'Search'
-    }
+    placeholder: String
   },
   data: function data () {
     return {
@@ -11369,7 +11342,7 @@ var QSelect = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=
 var label = ref.label;
 var value = ref.value;
 var optDisable = ref.disable;
-return _c('q-chip',{key:label,attrs:{"small":"","closable":!_vm.disable && !optDisable,"color":_vm.color},on:{"hide":function($event){_vm.__toggleMultiple(value, _vm.disable || optDisable);}},nativeOn:{"click":function($event){$event.stopPropagation();}}},[_vm._v(" "+_vm._s(label)+" ")])})):_c('div',{staticClass:"col row items-center q-input-target",class:_vm.alignClass,domProps:{"innerHTML":_vm._s(_vm.actualValue)}}),_vm._v(" "),(!_vm.disable && _vm.clearable && _vm.length)?_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"cancel"},on:{"click":function($event){$event.stopPropagation();_vm.clear($event);}},slot:"after"}):_vm._e(),_vm._v(" "),_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"arrow_drop_down"},slot:"after"}),_vm._v(" "),_c('q-popover',{ref:"popover",staticClass:"column no-wrap",attrs:{"fit":"","disable":_vm.disable,"offset":[0, 10],"anchor-click":false},on:{"show":_vm.__onFocus,"hide":_vm.__onClose}},[_c('q-field-reset',[(_vm.filter)?_c('q-search',{ref:"filter",staticClass:"no-margin",staticStyle:{"min-height":"50px","padding":"10px"},attrs:{"placeholder":_vm.filterPlaceholder,"debounce":100,"color":_vm.color,"icon":"filter_list"},on:{"input":_vm.reposition},model:{value:(_vm.terms),callback:function ($$v) {_vm.terms=$$v;},expression:"terms"}}):_vm._e()],1),_vm._v(" "),_c('q-list',{staticClass:"no-border scroll",attrs:{"separator":_vm.separator}},[(_vm.multiple)?_vm._l((_vm.visibleOptions),function(opt){return _c('q-item-wrapper',{key:JSON.stringify(opt),class:{'text-faded': opt.disable},attrs:{"cfg":opt,"link":!opt.disable,"slot-replace":""},on:{"!click":function($event){_vm.__toggleMultiple(opt.value, opt.disable);}}},[(_vm.toggle)?_c('q-toggle',{attrs:{"slot":"right","color":_vm.color,"value":_vm.optModel[opt.index],"disable":opt.disable},slot:"right"}):_c('q-checkbox',{attrs:{"slot":"left","color":_vm.color,"value":_vm.optModel[opt.index],"disable":opt.disable},slot:"left"})],1)}):_vm._l((_vm.visibleOptions),function(opt){return _c('q-item-wrapper',{key:JSON.stringify(opt),class:{'text-faded': opt.disable},attrs:{"cfg":opt,"link":!opt.disable,"slot-replace":"","active":_vm.value === opt.value},on:{"!click":function($event){_vm.__singleSelect(opt.value, opt.disable);}}},[(_vm.radio)?_c('q-radio',{attrs:{"slot":"left","color":_vm.color,"value":_vm.value,"val":opt.value,"disable":opt.disable},slot:"left"}):_vm._e()],1)})],2)],1)],1)},staticRenderFns: [],
+return _c('q-chip',{key:label,attrs:{"small":"","closable":!_vm.disable && !optDisable,"color":_vm.color},on:{"hide":function($event){_vm.__toggleMultiple(value, _vm.disable || optDisable);}},nativeOn:{"click":function($event){$event.stopPropagation();}}},[_vm._v(" "+_vm._s(label)+" ")])})):_c('div',{staticClass:"col row items-center q-input-target",class:_vm.alignClass,domProps:{"innerHTML":_vm._s(_vm.actualValue)}}),_vm._v(" "),(!_vm.disable && _vm.clearable && _vm.length)?_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"cancel"},on:{"click":function($event){$event.stopPropagation();_vm.clear($event);}},slot:"after"}):_vm._e(),_vm._v(" "),_c('q-icon',{staticClass:"q-if-control",attrs:{"slot":"after","name":"arrow_drop_down"},slot:"after"}),_vm._v(" "),_c('q-popover',{ref:"popover",staticClass:"column no-wrap",attrs:{"fit":"","disable":_vm.disable,"offset":[0, 10],"anchor-click":false},on:{"show":_vm.__onFocus,"hide":_vm.__onClose}},[_c('q-field-reset',[(_vm.filter)?_c('q-search',{ref:"filter",staticClass:"no-margin",staticStyle:{"min-height":"50px","padding":"10px"},attrs:{"placeholder":_vm.filterPlaceholder || _vm.$q.i18n.label.filter,"debounce":100,"color":_vm.color,"icon":"filter_list"},on:{"input":_vm.reposition},model:{value:(_vm.terms),callback:function ($$v) {_vm.terms=$$v;},expression:"terms"}}):_vm._e()],1),_vm._v(" "),_c('q-list',{staticClass:"no-border scroll",attrs:{"separator":_vm.separator}},[(_vm.multiple)?_vm._l((_vm.visibleOptions),function(opt){return _c('q-item-wrapper',{key:JSON.stringify(opt),class:{'text-faded': opt.disable},attrs:{"cfg":opt,"link":!opt.disable,"slot-replace":""},on:{"!click":function($event){_vm.__toggleMultiple(opt.value, opt.disable);}}},[(_vm.toggle)?_c('q-toggle',{attrs:{"slot":"right","color":_vm.color,"value":_vm.optModel[opt.index],"disable":opt.disable},slot:"right"}):_c('q-checkbox',{attrs:{"slot":"left","color":_vm.color,"value":_vm.optModel[opt.index],"disable":opt.disable},slot:"left"})],1)}):_vm._l((_vm.visibleOptions),function(opt){return _c('q-item-wrapper',{key:JSON.stringify(opt),class:{'text-faded': opt.disable},attrs:{"cfg":opt,"link":!opt.disable,"slot-replace":"","active":_vm.value === opt.value},on:{"!click":function($event){_vm.__singleSelect(opt.value, opt.disable);}}},[(_vm.radio)?_c('q-radio',{attrs:{"slot":"left","color":_vm.color,"value":_vm.value,"val":opt.value,"disable":opt.disable},slot:"left"}):_vm._e()],1)})],2)],1)],1)},staticRenderFns: [],
   name: 'q-select',
   mixins: [SelectMixin],
   components: {
@@ -11384,10 +11357,7 @@ return _c('q-chip',{key:label,attrs:{"small":"","closable":!_vm.disable && !optD
   },
   props: {
     filter: [Function, Boolean],
-    filterPlaceholder: {
-      type: String,
-      default: 'Filter'
-    },
+    filterPlaceholder: String,
     autofocusFilter: Boolean,
     radio: Boolean,
     placeholder: String,
@@ -11493,14 +11463,8 @@ return _c('q-chip',{key:label,attrs:{"small":"","closable":!_vm.disable && !optD
   name: 'q-dialog-select',
   mixins: [SelectMixin],
   props: {
-    okLabel: {
-      type: String,
-      default: 'OK'
-    },
-    cancelLabel: {
-      type: String,
-      default: 'Cancel'
-    },
+    okLabel: String,
+    cancelLabel: String,
     title: {
       type: String,
       default: 'Select'
@@ -11529,21 +11493,20 @@ return _c('q-chip',{key:label,attrs:{"small":"","closable":!_vm.disable && !optD
 
       // TODO
       this.dialog = this.$q.dialog({
-        title: this.title,
+        title: this.title || this.$q.i18n.label.select,
         message: this.message,
         color: this.color,
-        onDismiss: function () {
-          this$1.dialog = null;
-        },
         options: {
           type: this.type,
           model: clone(this.value),
           items: this.options
         },
-        cancel: true,
-        cancelLabel: this.cancelLabel,
-        okLabel: this.okLabel
+        cancel: this.cancelLabel || true,
+        ok: this.okLabel || true
+      }).catch(function () {
+        this$1.dialog = null;
       }).then(function (data) {
+        this$1.dialog = null;
         if (JSON.stringify(this$1.value) !== JSON.stringify(data)) {
           this$1.$emit('input', data);
           this$1.$emit('change', data);
@@ -12939,8 +12902,8 @@ var Bottom = {
     getBottom: function getBottom (h) {
       if (this.nothingToDisplay) {
         var message = this.filter
-          ? this.noResultsLabel
-          : (this.loader ? this.loaderLabel : this.noDataLabel);
+          ? this.noResultsLabel || this.$q.i18n.table.noResults
+          : (this.loader ? this.loaderLabel || this.$q.i18n.table.loader : this.noDataLabel || this.$q.i18n.table.noData);
 
         return h('div', { staticClass: 'q-table-bottom row items-center q-table-nodata' }, [
           h(QIcon, {props: {name: 'warning'}}),
@@ -12962,16 +12925,17 @@ var Bottom = {
       var ref = this.computedPagination;
       var page = ref.page;
       var rowsPerPage = ref.rowsPerPage;
+      var paginationLabel = this.paginationLabel || this.$q.i18n.table.pagination;
 
       return [
         h('div', { staticClass: 'col' }, [
           this.selection && this.rowsSelectedNumber > 0
-            ? this.selectedRowsLabel(this.rowsSelectedNumber)
+            ? (this.selectedRowsLabel || this.$q.i18n.table.selectedRows)(this.rowsSelectedNumber)
             : ''
         ]),
         h('div', [
           h('span', { style: {marginRight: '32px'} }, [
-            this.rowsPerPageLabel
+            this.rowsPerPageLabel || this.$q.i18n.table.rowsPerPage
           ]),
           h(QSelect, {
             staticClass: 'inline',
@@ -12996,8 +12960,8 @@ var Bottom = {
           }),
           h('span', { style: {margin: '0 32px'} }, [
             rowsPerPage
-              ? this.paginationLabel(this.firstRowIndex + 1, Math.min(this.lastRowIndex, this.computedRowsNumber), this.computedRowsNumber)
-              : this.paginationLabel(1, this.computedRowsNumber, this.computedRowsNumber)
+              ? paginationLabel(this.firstRowIndex + 1, Math.min(this.lastRowIndex, this.computedRowsNumber), this.computedRowsNumber)
+              : paginationLabel(1, this.computedRowsNumber, this.computedRowsNumber)
           ]),
           h(QBtn, {
             props: {
@@ -13160,7 +13124,7 @@ var Pagination = {
     pagination: Object,
     rowsPerPageOptions: {
       type: Array,
-      default: function () { return [3, 5, 7, 10, 15, 20, 25, 50, 'All']; }
+      default: function () { return [3, 5, 7, 10, 15, 20, 25, 50, 0]; }
     }
   },
   data: function data () {
@@ -13190,9 +13154,11 @@ var Pagination = {
       return page * rowsPerPage
     },
     computedRowsPerPageOptions: function computedRowsPerPageOptions () {
+      var this$1 = this;
+
       return this.rowsPerPageOptions.map(function (count) { return ({
-        label: '' + count,
-        value: typeof count === 'string' ? 0 : count
+        label: count === 0 ? this$1.$q.i18n.table.allRows : '' + count,
+        value: count
       }); })
     }
   },
@@ -13370,30 +13336,12 @@ var QTable = {
       default: 'horizontal',
       validator: function (v) { return ['horizontal', 'vertical', 'cell', 'none'].includes(v); }
     },
-    noDataLabel: {
-      type: String,
-      default: 'No data available'
-    },
-    noResultsLabel: {
-      type: String,
-      default: 'No matching records found'
-    },
-    loaderLabel: {
-      type: String,
-      default: 'Loading...'
-    },
-    selectedRowsLabel: {
-      type: Function,
-      default: function (rows) { return (rows + " selected row(s)."); }
-    },
-    rowsPerPageLabel: {
-      type: String,
-      default: 'Rows per page:'
-    },
-    paginationLabel: {
-      type: Function,
-      default: function (start, end, total) { return (start + "-" + end + " of " + total); }
-    },
+    noDataLabel: String,
+    noResultsLabel: String,
+    loaderLabel: String,
+    selectedRowsLabel: Function,
+    rowsPerPageLabel: String,
+    paginationLabel: Function,
     tableStyle: {
       type: [String, Array, Object],
       default: ''
@@ -13554,10 +13502,7 @@ var QTableColumns = {
       type: Array,
       required: true
     },
-    label: {
-      type: String,
-      default: 'Columns'
-    },
+    label: String,
     columns: {
       type: Array,
       required: true
@@ -13579,7 +13524,7 @@ var QTableColumns = {
         toggle: true,
         value: this.value,
         options: this.computedOptions,
-        displayValue: this.label,
+        displayValue: this.label || this.$q.i18n.table.columns,
         color: this.color
       }
     })
