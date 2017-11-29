@@ -909,83 +909,6 @@ input[type='search']::-webkit-search-decoration
     cursor pointer
   span + span
     margin-left 16px
-.q-notifications > div
-  z-index $z-notify
-.q-notification-list-center
-  pointer-events none
-  top 0
-  left 0
-  right 0
-  bottom 0
-  margin-bottom 10px
-.q-notification-list-top
-  pointer-events none
-  top 0
-  left 0
-  right 0
-  margin-bottom 10px
-.q-notification-list-bottom
-  pointer-events none
-  left 0
-  right 0
-  bottom 0
-  margin-bottom 10px
-.q-notification
-  border-radius 5px
-  pointer-events all
-  display inline-block
-  margin 10px 10px 0
-  transition all 1s
-  z-index $z-notify
-.q-notification-
-  &top-enter,
-  &top-right-enter, &top-right-leave-to,
-  &top-left-enter, &top-left-leave-to,
-  &top-enter, &top-leave-to
-    opacity 0
-    transform translateY(-50px)
-    z-index ($z-notify - 1)
-  &center-enter, &center-leave-to,
-  &bottom-enter, &bottom-leave-to,
-  &left-enter, &left-leave-to,
-  &right-enter, &right-leave-to,
-  &bottom-right-enter, &bottom-right-leave-to,
-  &bottom-left-enter, &bottom-left-leave-to,
-  &bottom-enter, &bottom-leave-to
-    opacity 0
-    transform translateY(50px)
-    z-index ($z-notify - 1)
-  &center-leave-active,
-  &top-leave-active
-    position absolute
-    top 0
-    margin 10px 0
-    z-index ($z-notify - 1)
-  &right-leave-active,
-  &top-right-leave-active
-    position absolute
-    right 0
-    z-index ($z-notify - 1)
-  &left-leave-active,
-  &top-left-leave-active
-    position absolute
-    left 0
-    z-index ($z-notify - 1)
-  &bottom-leave-active
-    position absolute
-    bottom 0
-    margin 10px 0
-    z-index ($z-notify - 1)
-  &bottom-right-leave-active
-    position absolute
-    bottom 0
-    right 0
-    z-index ($z-notify - 1)
-  &bottom-left-leave-active
-    position absolute
-    bottom 0
-    left 0
-    z-index ($z-notify - 1)
 ul.breadcrumb
   list-style none
   display inline-flex
@@ -1067,8 +990,6 @@ button-round-factor($size)
   outline 0
   border 0
   vertical-align middle
-  vertical-align -webkit-baseline-middle
-  vertical-align -moz-middle-with-baseline
   cursor pointer
   -webkit-appearance button
   padding $button-padding
@@ -1095,7 +1016,8 @@ button-round-factor($size)
   border-radius $button-push-border-radius
   border-bottom 3px solid rgba(0, 0, 0, .15)
   &:active:not(.disabled)
-    border-bottom 0
+    transform translateY(3px)
+    border-bottom-color transparent
 .q-btn-rounded
   border-radius $button-rounded-border-radius
 .q-btn-round
@@ -1141,6 +1063,9 @@ for $name, $size in $button-round-sizes
     border-bottom-left-radius 0
 .q-btn-group-push
   border-radius $button-push-border-radius
+  .q-btn-push:active:not(.disabled)
+    border-bottom 0 solid transparent
+    transform translateY(0)
 .q-btn-group-rounded
   border-radius $button-rounded-border-radius
 .q-btn-group-outline
@@ -2217,6 +2142,76 @@ maximized-modal()
   opacity 0
   .modal-content
     transform translateX(-30%)
+.q-notifications > div
+  z-index $z-notify
+.q-notification-list
+  pointer-events none
+  left 0
+  right 0
+  margin-bottom 10px
+.q-notification-list-center
+  top 0
+  bottom 0
+.q-notification-list-top
+  top 0
+.q-notification-list-bottom
+  bottom 0
+.q-notification
+  border-radius 5px
+  pointer-events all
+  display inline-block
+  margin 10px 10px 0
+  transition all 1s
+  z-index $z-notify
+.q-notification-
+  &top-enter,
+  &top-right-enter, &top-right-leave-to,
+  &top-left-enter, &top-left-leave-to,
+  &top-enter, &top-leave-to
+    opacity 0
+    transform translateY(-50px)
+    z-index ($z-notify - 1)
+  &center-enter, &center-leave-to,
+  &bottom-enter, &bottom-leave-to,
+  &left-enter, &left-leave-to,
+  &right-enter, &right-leave-to,
+  &bottom-right-enter, &bottom-right-leave-to,
+  &bottom-left-enter, &bottom-left-leave-to,
+  &bottom-enter, &bottom-leave-to
+    opacity 0
+    transform translateY(50px)
+    z-index ($z-notify - 1)
+  &center-leave-active,
+  &top-leave-active
+    position absolute
+    top 0
+    margin 10px 0
+    z-index ($z-notify - 1)
+  &right-leave-active,
+  &top-right-leave-active
+    position absolute
+    right 0
+    z-index ($z-notify - 1)
+  &left-leave-active,
+  &top-left-leave-active
+    position absolute
+    left 0
+    z-index ($z-notify - 1)
+  &bottom-leave-active
+    position absolute
+    bottom 0
+    margin 10px 0
+    z-index ($z-notify - 1)
+  &bottom-right-leave-active
+    position absolute
+    bottom 0
+    right 0
+    z-index ($z-notify - 1)
+  &bottom-left-leave-active
+    position absolute
+    bottom 0
+    left 0
+    z-index ($z-notify - 1)
 .q-option-inner
   display inline-block
   line-height 0
@@ -2960,6 +2955,152 @@ body.mobile .q-tabs-scroller
       background $table-dark-selected-background
     &:hover
       background $table-dark-hover-background
+.q-timeline
+  margin 0
+  padding 0
+  width 100%
+  list-style none
+  h6
+    line-height inherit
+.q-timeline-subtitle
+  font-size 12px
+  margin-bottom 8px
+  opacity .4
+  text-transform uppercase
+  letter-spacing 1px
+  font-weight 700
+.q-timeline-dot
+  position absolute
+  top 0
+  bottom 0
+  left 0
+  width 15px
+  &:before, &:after
+    content ''
+    background currentColor
+    display block
+    position absolute
+  &:before
+    border 3px solid transparent
+    border-radius 100%
+    height 15px
+    width 15px
+    top 4px
+    left 0
+    transition background .3s ease-in-out, border .3s ease-in-out
+  &:after
+    width 3px
+    opacity .4
+    top 24px
+    bottom 0
+    left 6px
+.q-timeline-entry-with-icon
+  .q-timeline-dot
+    width 31px
+    left -8px
+    &:before
+      height 31px
+      width 31px
+    &:after
+      top 41px
+      left 14px
+    .q-icon
+      position absolute
+      top 8px
+      left 4px
+      font-size 23px
+      color white
+      transition color .3s ease-in-out
+  .q-timeline-subtitle
+    padding-top 8px
+.q-timeline-dark
+  color white
+  .q-timeline-subtitle
+    opacity .7
+.q-timeline-entry
+  padding-left 40px
+  position relative
+  line-height 22px
+  &:last-child
+    padding-bottom 0
+    .q-timeline-dot:after
+      content none
+  &:hover
+    .q-timeline-dot:before
+      background transparent
+      border 3px solid currentColor
+  &.q-timeline-entry-with-icon:hover .q-timeline-dot .q-icon
+    color currentColor
+.q-timeline-content
+  padding-bottom 24px
+.q-timeline-heading
+  position relative
+  &:first-child .q-timeline-heading-title
+    padding-top 0
+  &:last-child .q-timeline-heading-title
+    padding-bottom 0
+.q-timeline-heading-title
+  padding 32px 0
+  margin 0
+@media (min-width $breakpoint-md-min) and (max-width $breakpoint-md-max)
+  .q-timeline-heading
+    display table-row
+    font-size 200%
+    > div
+      display table-cell
+  .q-timeline-heading-title
+    margin-left -50px
+  .q-timeline
+    display table
+  .q-timeline-entry
+    display table-row
+    padding 0
+  .q-timeline-subtitle, .q-timeline-dot, .q-timeline-content
+    display table-cell
+    vertical-align top
+  .q-timeline-subtitle
+    text-align right
+    width 35%
+  .q-timeline-dot
+    position relative
+  .q-timeline-content
+    padding-left 30px
+  .q-timeline-entry-with-icon .q-timeline-content
+    padding-top 8px
+  .q-timeline-subtitle
+    padding-right 30px
+@media (min-width $breakpoint-lg-min)
+  .q-timeline-heading-title
+    text-align center
+    margin-left 0
+  .q-timeline-entry, .q-timeline-subtitle, .q-timeline-dot, .q-timeline-content
+    display block
+    margin 0
+    padding 0
+  .q-timeline-dot
+    position absolute
+    left 50%
+    margin-left -7.15px
+  .q-timeline-entry-with-icon .q-timeline-dot
+    left 50%
+    margin-left -15px
+  .q-timeline-subtitle, .q-timeline-content
+    width 50%
+  .q-timeline-entry-left .q-timeline-content,
+  .q-timeline-entry-right .q-timeline-subtitle
+    float left
+    padding-right 30px
+    text-align right
+  .q-timeline-entry-left .q-timeline-subtitle,
+  .q-timeline-entry-right .q-timeline-content
+    float right
+    text-align left
+    padding-left 30px
+  .q-timeline-entry-with-icon .q-timeline-content
+    padding-top 8px
+  .q-timeline-entry
+    padding-bottom 24px
+    overflow hidden
 $toggle-width           = 50px
 $toggle-height          = 32px
 $toggle-span            = 2px
@@ -4464,8 +4605,9 @@ for $name, $size in $sizes
       flex-basis 0
       flex-grow 1
     .col-{$name}-auto
-      width auto
       flex 0 0 auto
+      .row > &
+        width auto
     for $i in (1..$flex-cols)
       .col-{$name}-{$i}
         flex 0 0 (round($i / $flex-cols * 100, 4))%
