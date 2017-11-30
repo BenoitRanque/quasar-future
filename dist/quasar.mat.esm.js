@@ -5761,7 +5761,7 @@ var input = {
 var MILLISECONDS_IN_DAY = 86400000;
 var MILLISECONDS_IN_HOUR = 3600000;
 var MILLISECONDS_IN_MINUTE = 60000;
-var token = /d{1,4}|M{1,4}|m{1,2}|w{1,2}|Qo|Do|D{1,4}|YY(?:YY)?|H{1,2}|h{1,2}|s{1,2}|S{1,3}|Z{1,2}|a{1,2}|[AQExX]/g;
+var token = /\[((?:[^\]\\]|\\]|\\)*)\]|d{1,4}|M{1,4}|m{1,2}|w{1,2}|Qo|Do|D{1,4}|YY(?:YY)?|H{1,2}|h{1,2}|s{1,2}|S{1,3}|Z{1,2}|a{1,2}|[AQExX]/g;
 
 function formatTimezone (offset, delimeter) {
   if ( delimeter === void 0 ) delimeter = '';
@@ -6272,11 +6272,13 @@ function formatDate (val, mask) {
 
   var date = new Date(val);
 
-  return mask.replace(token, function (match) {
+  return mask.replace(token, function (match, text) {
     if (match in formatter) {
       return formatter[match](date)
     }
-    return match
+    return text === void 0
+      ? match
+      : text.split('\\]').join(']')
   })
 }
 
@@ -7009,7 +7011,8 @@ var QInput = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_
       type: Number,
       default: 1
     },
-    maxDecimals: Number
+    maxDecimals: Number,
+    upperCase: Boolean
   },
   data: function data () {
     var this$1 = this;
@@ -7108,6 +7111,7 @@ var QInput = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_
 
     __set: function __set (e) {
       var val = e.target ? e.target.value : e;
+
       if (this.isNumber) {
         val = parseFloat(val);
         if (isNaN(val)) {
@@ -7118,6 +7122,10 @@ var QInput = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_
           val = parseFloat(val.toFixed(this.maxDecimals));
         }
       }
+      else if (this.upperCase) {
+        val = val.toUpperCase();
+      }
+
       if (val !== this.model) {
         this.$emit('input', val);
       }
