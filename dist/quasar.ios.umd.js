@@ -430,6 +430,7 @@ if (!Array.prototype.find) {
 }
 
 var langEn = {
+  lang: 'en-us',
   label: {
     clear: 'Clear',
     ok: 'OK',
@@ -531,6 +532,7 @@ var i18n = {
       lang.set = this$1.set;
 
       Vue$$1.set($q, 'i18n', lang);
+      this$1.name = lang.lang;
       this$1.lang = lang;
     };
 
@@ -2087,103 +2089,6 @@ var typeIcon = {
   warning: 'priority_high'
 };
 
-var QAlert = {
-  name: 'q-alert',
-  props: {
-    type: {
-      type: String,
-      validator: function (v) { return ['positive', 'negative', 'warning', 'info'].includes(v); }
-    },
-    color: {
-      type: String,
-      default: 'negative'
-    },
-    textColor: String,
-    icon: String,
-    avatar: String,
-    actions: Array,
-    message: String
-  },
-  computed: {
-    computedIcon: function computedIcon () {
-      return this.icon
-        ? this.icon
-        : typeIcon[this.type || this.color]
-    },
-    classes: function classes () {
-      var cls = "bg-" + (this.type || this.color);
-      if (this.textColor) {
-        cls += " text-" + (this.textColor);
-      }
-      return cls
-    }
-  },
-  render: function render (h) {
-    var side = [];
-
-    if (this.avatar) {
-      side.push(
-        h('img', {
-          staticClass: 'avatar',
-          domProps: { src: this.avatar }
-        })
-      );
-    }
-    else if (this.icon || this.type) {
-      side.push(
-        h(QIcon, {
-          props: { name: this.computedIcon }
-        })
-      );
-    }
-
-    return h('div', [
-      h('div', {
-        staticClass: 'q-alert row no-wrap shadow-4',
-        'class': this.classes
-      }, [
-        side.length
-          ? h('div', { staticClass: 'q-alert-side row col-auto flex-center' }, side)
-          : null,
-        h('div', {
-          staticClass: 'q-alert-content col self-center'
-        }, [
-          this.$slots.default || this.message,
-          this.actions && this.actions.length
-            ? h('div', { staticClass: 'q-alert-actions row items-center' },
-              this.actions.map(function (action) { return h('span', {
-                  on: {
-                    click: function () { return action.handler(); }
-                  }
-                }, [ action.label ]); }
-              )
-            )
-            : null
-        ])
-      ])
-    ])
-  }
-};
-
-var filter = function (terms, ref) {
-  var field = ref.field;
-  var list = ref.list;
-
-  var token = terms.toLowerCase();
-  return list.filter(function (item) { return ('' + item[field]).toLowerCase().startsWith(token); })
-};
-
-function s4 () {
-  return Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1)
-}
-
-var uid = function () {
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-    s4() + '-' + s4() + s4() + s4()
-};
-
 function getEvent (e) {
   return e || window.event
 }
@@ -2316,763 +2221,6 @@ var event = Object.freeze({
 	targetElement: targetElement,
 	getMouseWheelDistance: getMouseWheelDistance
 });
-
-function getAnchorPosition (el, offset) {
-  var ref = el.getBoundingClientRect();
-  var top = ref.top;
-  var left = ref.left;
-  var right = ref.right;
-  var bottom = ref.bottom;
-  var a = {
-      top: top,
-      left: left,
-      width: el.offsetWidth,
-      height: el.offsetHeight
-    };
-
-  if (offset) {
-    a.top -= offset[1];
-    a.left -= offset[0];
-    if (bottom) {
-      bottom += offset[1];
-    }
-    if (right) {
-      right += offset[0];
-    }
-    a.width += offset[0];
-    a.height += offset[1];
-  }
-
-  a.right = right || a.left + a.width;
-  a.bottom = bottom || a.top + a.height;
-  a.middle = a.left + ((a.right - a.left) / 2);
-  a.center = a.top + ((a.bottom - a.top) / 2);
-
-  return a
-}
-
-function getTargetPosition (el) {
-  return {
-    top: 0,
-    center: el.offsetHeight / 2,
-    bottom: el.offsetHeight,
-    left: 0,
-    middle: el.offsetWidth / 2,
-    right: el.offsetWidth
-  }
-}
-
-function getOverlapMode (anchor, target, median) {
-  if ([anchor, target].indexOf(median) >= 0) { return 'auto' }
-  if (anchor === target) { return 'inclusive' }
-  return 'exclusive'
-}
-
-function getPositions (anchor, target) {
-  var
-    a = extend({}, anchor),
-    t = extend({}, target);
-
-  var positions = {
-    x: ['left', 'right'].filter(function (p) { return p !== t.horizontal; }),
-    y: ['top', 'bottom'].filter(function (p) { return p !== t.vertical; })
-  };
-
-  var overlap = {
-    x: getOverlapMode(a.horizontal, t.horizontal, 'middle'),
-    y: getOverlapMode(a.vertical, t.vertical, 'center')
-  };
-
-  positions.x.splice(overlap.x === 'auto' ? 0 : 1, 0, 'middle');
-  positions.y.splice(overlap.y === 'auto' ? 0 : 1, 0, 'center');
-
-  if (overlap.y !== 'auto') {
-    a.vertical = a.vertical === 'top' ? 'bottom' : 'top';
-    if (overlap.y === 'inclusive') {
-      t.vertical = t.vertical;
-    }
-  }
-
-  if (overlap.x !== 'auto') {
-    a.horizontal = a.horizontal === 'left' ? 'right' : 'left';
-    if (overlap.y === 'inclusive') {
-      t.horizontal = t.horizontal;
-    }
-  }
-
-  return {
-    positions: positions,
-    anchorPos: a
-  }
-}
-
-function applyAutoPositionIfNeeded (anchor, target, selfOrigin, anchorOrigin, targetPosition) {
-  var ref = getPositions(anchorOrigin, selfOrigin);
-  var positions = ref.positions;
-  var anchorPos = ref.anchorPos;
-
-  if (targetPosition.top < 0 || targetPosition.top + target.bottom > window.innerHeight) {
-    var newTop = anchor[anchorPos.vertical] - target[positions.y[0]];
-    if (newTop + target.bottom <= window.innerHeight) {
-      targetPosition.top = newTop;
-    }
-    else {
-      newTop = anchor[anchorPos.vertical] - target[positions.y[1]];
-      if (newTop + target.bottom <= window.innerHeight) {
-        targetPosition.top = newTop;
-      }
-    }
-  }
-  if (targetPosition.left < 0 || targetPosition.left + target.right > window.innerWidth) {
-    var newLeft = anchor[anchorPos.horizontal] - target[positions.x[0]];
-    if (newLeft + target.right <= window.innerWidth) {
-      targetPosition.left = newLeft;
-    }
-    else {
-      newLeft = anchor[anchorPos.horizontal] - target[positions.x[1]];
-      if (newLeft + target.right <= window.innerWidth) {
-        targetPosition.left = newLeft;
-      }
-    }
-  }
-  return targetPosition
-}
-
-function parseHorizTransformOrigin (pos) {
-  return pos === 'middle' ? 'center' : pos
-}
-
-function getTransformProperties (ref) {
-  var selfOrigin = ref.selfOrigin;
-
-  var
-    vert = selfOrigin.vertical,
-    horiz = parseHorizTransformOrigin(selfOrigin.horizontal);
-
-  return {
-    'transform-origin': vert + ' ' + horiz + ' 0px'
-  }
-}
-
-function setPosition (ref) {
-  var el = ref.el;
-  var anchorEl = ref.anchorEl;
-  var anchorOrigin = ref.anchorOrigin;
-  var selfOrigin = ref.selfOrigin;
-  var maxHeight = ref.maxHeight;
-  var event = ref.event;
-  var anchorClick = ref.anchorClick;
-  var touchPosition = ref.touchPosition;
-  var offset = ref.offset;
-
-  var anchor;
-  el.style.maxHeight = maxHeight || '65vh';
-
-  if (event && (!anchorClick || touchPosition)) {
-    var ref$1 = position(event);
-    var top = ref$1.top;
-    var left = ref$1.left;
-    anchor = {top: top, left: left, width: 1, height: 1, right: left + 1, center: top, middle: left, bottom: top + 1};
-  }
-  else {
-    anchor = getAnchorPosition(anchorEl, offset);
-  }
-
-  var target = getTargetPosition(el);
-  var targetPosition = {
-    top: anchor[anchorOrigin.vertical] - target[selfOrigin.vertical],
-    left: anchor[anchorOrigin.horizontal] - target[selfOrigin.horizontal]
-  };
-
-  targetPosition = applyAutoPositionIfNeeded(anchor, target, selfOrigin, anchorOrigin, targetPosition);
-
-  el.style.top = Math.max(0, targetPosition.top) + 'px';
-  el.style.left = Math.max(0, targetPosition.left) + 'px';
-}
-
-function positionValidator (pos) {
-  var parts = pos.split(' ');
-  if (parts.length !== 2) {
-    return false
-  }
-  if (!['top', 'center', 'bottom'].includes(parts[0])) {
-    console.error('Anchor/Self position must start with one of top/center/bottom');
-    return false
-  }
-  if (!['left', 'middle', 'right'].includes(parts[1])) {
-    console.error('Anchor/Self position must end with one of left/middle/right');
-    return false
-  }
-  return true
-}
-
-function offsetValidator (val) {
-  if (!val) { return true }
-  if (val.length !== 2) { return false }
-  if (typeof val[0] !== 'number' || typeof val[1] !== 'number') {
-    return false
-  }
-  return true
-}
-
-function parsePosition (pos) {
-  var parts = pos.split(' ');
-  return {vertical: parts[0], horizontal: parts[1]}
-}
-
-function debounce (fn, wait, immediate) {
-  if ( wait === void 0 ) wait = 250;
-
-  var timeout;
-
-  function debounced () {
-    var this$1 = this;
-    var args = [], len = arguments.length;
-    while ( len-- ) args[ len ] = arguments[ len ];
-
-    var later = function () {
-      timeout = null;
-      if (!immediate) {
-        fn.apply(this$1, args);
-      }
-    };
-
-    clearTimeout(timeout);
-    if (immediate && !timeout) {
-      fn.apply(this, args);
-    }
-    timeout = setTimeout(later, wait);
-  }
-
-  debounced.cancel = function () {
-    clearTimeout(timeout);
-  };
-
-  return debounced
-}
-
-function frameDebounce (fn) {
-  var wait = false;
-
-  return function () {
-    var this$1 = this;
-    var args = [], len = arguments.length;
-    while ( len-- ) args[ len ] = arguments[ len ];
-
-    if (wait) { return }
-
-    wait = true;
-    window.requestAnimationFrame(function () {
-      fn.apply(this$1, args);
-      wait = false;
-    });
-  }
-}
-
-function getScrollTarget (el) {
-  return el.closest('.scroll') || window
-}
-
-function getScrollHeight (el) {
-  return (el === window ? document.body : el).scrollHeight
-}
-
-function getScrollPosition (scrollTarget) {
-  if (scrollTarget === window) {
-    return window.pageYOffset || window.scrollY || document.body.scrollTop || 0
-  }
-  return scrollTarget.scrollTop
-}
-
-function animScrollTo (el, to, duration) {
-  if (duration <= 0) {
-    return
-  }
-
-  var pos = getScrollPosition(el);
-
-  window.requestAnimationFrame(function () {
-    setScroll(el, pos + (to - pos) / duration * 16);
-    if (el.scrollTop !== to) {
-      animScrollTo(el, to, duration - 16);
-    }
-  });
-}
-
-function setScroll (scrollTarget, offset$$1) {
-  if (scrollTarget === window) {
-    document.documentElement.scrollTop = offset$$1;
-    document.body.scrollTop = offset$$1;
-    return
-  }
-  scrollTarget.scrollTop = offset$$1;
-}
-
-function setScrollPosition (scrollTarget, offset$$1, duration) {
-  if (duration) {
-    animScrollTo(scrollTarget, offset$$1, duration);
-    return
-  }
-  setScroll(scrollTarget, offset$$1);
-}
-
-var size;
-function getScrollbarWidth () {
-  if (size !== undefined) {
-    return size
-  }
-
-  var
-    inner = document.createElement('p'),
-    outer = document.createElement('div');
-
-  css(inner, {
-    width: '100%',
-    height: '200px'
-  });
-  css(outer, {
-    position: 'absolute',
-    top: '0px',
-    left: '0px',
-    visibility: 'hidden',
-    width: '200px',
-    height: '150px',
-    overflow: 'hidden'
-  });
-
-  outer.appendChild(inner);
-
-  document.body.appendChild(outer);
-
-  var w1 = inner.offsetWidth;
-  outer.style.overflow = 'scroll';
-  var w2 = inner.offsetWidth;
-
-  if (w1 === w2) {
-    w2 = outer.clientWidth;
-  }
-
-  document.body.removeChild(outer);
-  size = w1 - w2;
-
-  return size
-}
-
-
-var scroll = Object.freeze({
-	getScrollTarget: getScrollTarget,
-	getScrollHeight: getScrollHeight,
-	getScrollPosition: getScrollPosition,
-	animScrollTo: animScrollTo,
-	setScrollPosition: setScrollPosition,
-	getScrollbarWidth: getScrollbarWidth
-});
-
-var QPopover = {
-  name: 'q-popover',
-  mixins: [ModelToggleMixin],
-  props: {
-    anchor: {
-      type: String,
-      default: 'bottom left',
-      validator: positionValidator
-    },
-    self: {
-      type: String,
-      default: 'top left',
-      validator: positionValidator
-    },
-    fit: Boolean,
-    maxHeight: String,
-    touchPosition: Boolean,
-    anchorClick: {
-      /*
-        for handling anchor outside of Popover
-        example: context menu component
-      */
-      type: Boolean,
-      default: true
-    },
-    offset: {
-      type: Array,
-      validator: offsetValidator
-    },
-    disable: Boolean
-  },
-  watch: {
-    $route: function $route () {
-      this.hide();
-    }
-  },
-  computed: {
-    transformCSS: function transformCSS () {
-      return getTransformProperties({selfOrigin: this.selfOrigin})
-    },
-    anchorOrigin: function anchorOrigin () {
-      return parsePosition(this.anchor)
-    },
-    selfOrigin: function selfOrigin () {
-      return parsePosition(this.self)
-    }
-  },
-  render: function render (h) {
-    return h('div', {
-      staticClass: 'q-popover animate-scale',
-      style: this.transformCSS,
-      on: {
-        click: function click (e) { e.stopPropagation(); }
-      }
-    }, this.$slots.default)
-  },
-  created: function created () {
-    var this$1 = this;
-
-    this.__updatePosition = frameDebounce(function () { this$1.reposition(); });
-  },
-  mounted: function mounted () {
-    var this$1 = this;
-
-    this.$nextTick(function () {
-      this$1.anchorEl = this$1.$el.parentNode;
-      this$1.anchorEl.removeChild(this$1.$el);
-      if (this$1.anchorEl.classList.contains('q-btn-inner')) {
-        this$1.anchorEl = this$1.anchorEl.parentNode;
-      }
-      if (this$1.anchorClick) {
-        this$1.anchorEl.classList.add('cursor-pointer');
-        this$1.anchorEl.addEventListener('click', this$1.toggle);
-      }
-    });
-    if (this.value) {
-      this.show();
-    }
-  },
-  beforeDestroy: function beforeDestroy () {
-    if (this.anchorClick && this.anchorEl) {
-      this.anchorEl.removeEventListener('click', this.toggle);
-    }
-  },
-  methods: {
-    __show: function __show (evt) {
-      var this$1 = this;
-
-      document.body.appendChild(this.$el);
-      EscapeKey.register(function () { this$1.hide(); });
-      this.scrollTarget = getScrollTarget(this.anchorEl);
-      this.scrollTarget.addEventListener('scroll', this.__updatePosition);
-      window.addEventListener('resize', this.__updatePosition);
-      this.reposition(evt);
-
-      clearTimeout(this.timer);
-      this.timer = setTimeout(function () {
-        document.body.addEventListener('click', this$1.__bodyHide, true);
-        document.body.addEventListener('touchstart', this$1.__bodyHide, true);
-        this$1.showPromise && this$1.showPromiseResolve();
-      }, 0);
-    },
-    __bodyHide: function __bodyHide (evt) {
-      if (
-        evt && evt.target &&
-        (this.$el.contains(evt.target) || (this.anchorClick && this.anchorEl.contains(evt.target)))
-      ) {
-        return
-      }
-
-      this.hide(evt);
-    },
-    __hide: function __hide (evt) {
-      clearTimeout(this.timer);
-
-      document.body.removeEventListener('click', this.__bodyHide, true);
-      document.body.removeEventListener('touchstart', this.__bodyHide, true);
-      this.scrollTarget.removeEventListener('scroll', this.__updatePosition);
-      window.removeEventListener('resize', this.__updatePosition);
-      EscapeKey.pop();
-
-      document.body.removeChild(this.$el);
-      this.hidePromise && this.hidePromiseResolve();
-    },
-    reposition: function reposition (event) {
-      var this$1 = this;
-
-      this.$nextTick(function () {
-        if (this$1.fit) {
-          this$1.$el.style.minWidth = width(this$1.anchorEl) + 'px';
-        }
-        var ref = this$1.anchorEl.getBoundingClientRect();
-        var top = ref.top;
-        var ref$1 = viewport();
-        var height$$1 = ref$1.height;
-        if (top < 0 || top > height$$1) {
-          return this$1.hide()
-        }
-        setPosition({
-          event: event,
-          el: this$1.$el,
-          offset: this$1.offset,
-          anchorEl: this$1.anchorEl,
-          anchorOrigin: this$1.anchorOrigin,
-          selfOrigin: this$1.selfOrigin,
-          maxHeight: this$1.maxHeight,
-          anchorClick: this$1.anchorClick,
-          touchPosition: this$1.touchPosition
-        });
-      });
-    }
-  }
-};
-
-function prevent (e) {
-  e.preventDefault();
-  e.stopPropagation();
-}
-
-var QAutocomplete = {
-  name: 'q-autocomplete',
-  props: {
-    minCharacters: {
-      type: Number,
-      default: 1
-    },
-    maxResults: {
-      type: Number,
-      default: 6
-    },
-    debounce: {
-      type: Number,
-      default: 500
-    },
-    filter: {
-      type: Function,
-      default: filter
-    },
-    staticData: Object,
-    separator: Boolean
-  },
-  inject: {
-    __input: {
-      default: function default$1 () {
-        console.error('QAutocomplete needs to be child of QInput or QSearch');
-      }
-    },
-    __inputDebounce: { default: null }
-  },
-  data: function data () {
-    return {
-      searchId: '',
-      results: [],
-      selectedIndex: -1,
-      width: 0,
-      enterKey: false,
-      timer: null
-    }
-  },
-  watch: {
-    '__input.val': function _input_val () {
-      if (this.enterKey) {
-        this.enterKey = false;
-      }
-      else {
-        this.__delayTrigger();
-      }
-    }
-  },
-  computed: {
-    computedResults: function computedResults () {
-      return this.maxResults && this.results.length > 0
-        ? this.results.slice(0, this.maxResults)
-        : []
-    },
-    computedWidth: function computedWidth () {
-      return {minWidth: this.width}
-    },
-    searching: function searching () {
-      return this.searchId.length > 0
-    }
-  },
-  methods: {
-    trigger: function trigger () {
-      var this$1 = this;
-
-      if (!this.__input.hasFocus()) {
-        return
-      }
-      var terms = this.__input.val;
-      this.width = width(this.inputEl) + 'px';
-      var searchId = uid();
-      this.searchId = searchId;
-
-      if (terms.length < this.minCharacters) {
-        this.searchId = '';
-        this.__clearSearch();
-        this.hide();
-        return
-      }
-
-      if (this.staticData) {
-        this.searchId = '';
-        this.results = this.filter(terms, this.staticData);
-        if (this.$q.platform.is.desktop) {
-          this.selectedIndex = 0;
-        }
-        this.$refs.popover.show();
-        return
-      }
-
-      this.hide();
-      this.__input.loading = true;
-      this.$emit('search', terms, function (results) {
-        if (this$1.searchId !== searchId) {
-          return
-        }
-
-        this$1.__clearSearch();
-
-        if (!this$1.results || this$1.results === results) {
-          return
-        }
-
-        if (Array.isArray(results) && results.length > 0) {
-          this$1.results = results;
-          if (this$1.$refs && this$1.$refs.popover) {
-            if (this$1.$q.platform.is.desktop) {
-              this$1.selectedIndex = 0;
-            }
-            this$1.$refs.popover.show();
-          }
-          return
-        }
-
-        this$1.hide();
-      });
-    },
-    hide: function hide () {
-      this.results = [];
-      this.selectedIndex = -1;
-      return this.$refs.popover.hide()
-    },
-    __clearSearch: function __clearSearch () {
-      clearTimeout(this.timer);
-      this.__input.loading = false;
-      this.searchId = '';
-    },
-    setValue: function setValue (result) {
-      var suffix = this.__inputDebounce ? 'Debounce' : '';
-      this[("__input" + suffix)].set(this.staticData ? result[this.staticData.field] : result.value);
-
-      this.$emit('selected', result);
-      this.__clearSearch();
-      this.hide();
-    },
-    move: function move (offset$$1) {
-      this.selectedIndex = normalizeToInterval(
-        this.selectedIndex + offset$$1,
-        0,
-        this.computedResults.length - 1
-      );
-    },
-    setCurrentSelection: function setCurrentSelection () {
-      this.enterKey = true;
-      if (this.selectedIndex >= 0) {
-        this.setValue(this.results[this.selectedIndex]);
-      }
-    },
-    __delayTrigger: function __delayTrigger () {
-      this.__clearSearch();
-      if (!this.__input.hasFocus()) {
-        return
-      }
-      if (this.staticData) {
-        this.trigger();
-        return
-      }
-      this.timer = setTimeout(this.trigger, this.debounce);
-    },
-    __handleKeypress: function __handleKeypress (e) {
-      switch (e.keyCode || e.which) {
-        case 38: // up
-          this.__moveCursor(-1, e);
-          break
-        case 40: // down
-          this.__moveCursor(1, e);
-          break
-        case 13: // enter
-          this.setCurrentSelection();
-          prevent(e);
-          break
-        case 27: // escape
-          this.__clearSearch();
-          break
-      }
-    },
-    __moveCursor: function __moveCursor (offset$$1, e) {
-      prevent(e);
-
-      if (!this.$refs.popover.showing) {
-        this.trigger();
-      }
-      else {
-        this.move(offset$$1);
-      }
-    }
-  },
-  mounted: function mounted () {
-    var this$1 = this;
-
-    this.__input.register();
-    if (this.__inputDebounce) {
-      this.__inputDebounce.setChildDebounce(true);
-    }
-    this.$nextTick(function () {
-      this$1.inputEl = this$1.__input.getEl();
-      this$1.inputEl.addEventListener('keyup', this$1.__handleKeypress);
-    });
-  },
-  beforeDestroy: function beforeDestroy () {
-    this.__clearSearch();
-    this.__input.unregister();
-    if (this.__inputDebounce) {
-      this.__inputDebounce.setChildDebounce(false);
-    }
-    if (this.inputEl) {
-      this.inputEl.removeEventListener('keydown', this.__handleKeypress);
-      this.hide();
-    }
-  },
-  render: function render (h) {
-    var this$1 = this;
-
-    return h(QPopover, {
-      ref: 'popover',
-      props: {
-        fit: true,
-        offset: [0, 10],
-        anchorClick: false
-      },
-      on: {
-        show: function () { return this$1.$emit('show'); },
-        hide: function () { return this$1.$emit('hide'); }
-      }
-    }, [
-      h(QList, {
-        props: {
-          noBorder: true,
-          link: true,
-          separator: this.separator
-        },
-        style: this.computedWidth
-      },
-      this.computedResults.map(function (result, index) { return h(QItemWrapper, {
-        key: result.id || JSON.stringify(result),
-        'class': { active: this$1.selectedIndex === index },
-        props: { cfg: result },
-        on: {
-          click: function () { this$1.setValue(result); }
-        }
-      }); }))
-    ])
-  }
-};
 
 function showRipple (evt, el, stopPropagation) {
   if (stopPropagation) {
@@ -3600,6 +2748,511 @@ var QBtnGroup = {
   }
 };
 
+function getAnchorPosition (el, offset) {
+  var ref = el.getBoundingClientRect();
+  var top = ref.top;
+  var left = ref.left;
+  var right = ref.right;
+  var bottom = ref.bottom;
+  var a = {
+      top: top,
+      left: left,
+      width: el.offsetWidth,
+      height: el.offsetHeight
+    };
+
+  if (offset) {
+    a.top -= offset[1];
+    a.left -= offset[0];
+    if (bottom) {
+      bottom += offset[1];
+    }
+    if (right) {
+      right += offset[0];
+    }
+    a.width += offset[0];
+    a.height += offset[1];
+  }
+
+  a.right = right || a.left + a.width;
+  a.bottom = bottom || a.top + a.height;
+  a.middle = a.left + ((a.right - a.left) / 2);
+  a.center = a.top + ((a.bottom - a.top) / 2);
+
+  return a
+}
+
+function getTargetPosition (el) {
+  return {
+    top: 0,
+    center: el.offsetHeight / 2,
+    bottom: el.offsetHeight,
+    left: 0,
+    middle: el.offsetWidth / 2,
+    right: el.offsetWidth
+  }
+}
+
+function getOverlapMode (anchor, target, median) {
+  if ([anchor, target].indexOf(median) >= 0) { return 'auto' }
+  if (anchor === target) { return 'inclusive' }
+  return 'exclusive'
+}
+
+function getPositions (anchor, target) {
+  var
+    a = extend({}, anchor),
+    t = extend({}, target);
+
+  var positions = {
+    x: ['left', 'right'].filter(function (p) { return p !== t.horizontal; }),
+    y: ['top', 'bottom'].filter(function (p) { return p !== t.vertical; })
+  };
+
+  var overlap = {
+    x: getOverlapMode(a.horizontal, t.horizontal, 'middle'),
+    y: getOverlapMode(a.vertical, t.vertical, 'center')
+  };
+
+  positions.x.splice(overlap.x === 'auto' ? 0 : 1, 0, 'middle');
+  positions.y.splice(overlap.y === 'auto' ? 0 : 1, 0, 'center');
+
+  if (overlap.y !== 'auto') {
+    a.vertical = a.vertical === 'top' ? 'bottom' : 'top';
+    if (overlap.y === 'inclusive') {
+      t.vertical = t.vertical;
+    }
+  }
+
+  if (overlap.x !== 'auto') {
+    a.horizontal = a.horizontal === 'left' ? 'right' : 'left';
+    if (overlap.y === 'inclusive') {
+      t.horizontal = t.horizontal;
+    }
+  }
+
+  return {
+    positions: positions,
+    anchorPos: a
+  }
+}
+
+function applyAutoPositionIfNeeded (anchor, target, selfOrigin, anchorOrigin, targetPosition) {
+  var ref = getPositions(anchorOrigin, selfOrigin);
+  var positions = ref.positions;
+  var anchorPos = ref.anchorPos;
+
+  if (targetPosition.top < 0 || targetPosition.top + target.bottom > window.innerHeight) {
+    var newTop = anchor[anchorPos.vertical] - target[positions.y[0]];
+    if (newTop + target.bottom <= window.innerHeight) {
+      targetPosition.top = newTop;
+    }
+    else {
+      newTop = anchor[anchorPos.vertical] - target[positions.y[1]];
+      if (newTop + target.bottom <= window.innerHeight) {
+        targetPosition.top = newTop;
+      }
+    }
+  }
+  if (targetPosition.left < 0 || targetPosition.left + target.right > window.innerWidth) {
+    var newLeft = anchor[anchorPos.horizontal] - target[positions.x[0]];
+    if (newLeft + target.right <= window.innerWidth) {
+      targetPosition.left = newLeft;
+    }
+    else {
+      newLeft = anchor[anchorPos.horizontal] - target[positions.x[1]];
+      if (newLeft + target.right <= window.innerWidth) {
+        targetPosition.left = newLeft;
+      }
+    }
+  }
+  return targetPosition
+}
+
+function parseHorizTransformOrigin (pos) {
+  return pos === 'middle' ? 'center' : pos
+}
+
+function getTransformProperties (ref) {
+  var selfOrigin = ref.selfOrigin;
+
+  var
+    vert = selfOrigin.vertical,
+    horiz = parseHorizTransformOrigin(selfOrigin.horizontal);
+
+  return {
+    'transform-origin': vert + ' ' + horiz + ' 0px'
+  }
+}
+
+function setPosition (ref) {
+  var el = ref.el;
+  var anchorEl = ref.anchorEl;
+  var anchorOrigin = ref.anchorOrigin;
+  var selfOrigin = ref.selfOrigin;
+  var maxHeight = ref.maxHeight;
+  var event = ref.event;
+  var anchorClick = ref.anchorClick;
+  var touchPosition = ref.touchPosition;
+  var offset = ref.offset;
+
+  var anchor;
+  el.style.maxHeight = maxHeight || '65vh';
+
+  if (event && (!anchorClick || touchPosition)) {
+    var ref$1 = position(event);
+    var top = ref$1.top;
+    var left = ref$1.left;
+    anchor = {top: top, left: left, width: 1, height: 1, right: left + 1, center: top, middle: left, bottom: top + 1};
+  }
+  else {
+    anchor = getAnchorPosition(anchorEl, offset);
+  }
+
+  var target = getTargetPosition(el);
+  var targetPosition = {
+    top: anchor[anchorOrigin.vertical] - target[selfOrigin.vertical],
+    left: anchor[anchorOrigin.horizontal] - target[selfOrigin.horizontal]
+  };
+
+  targetPosition = applyAutoPositionIfNeeded(anchor, target, selfOrigin, anchorOrigin, targetPosition);
+
+  el.style.top = Math.max(0, targetPosition.top) + 'px';
+  el.style.left = Math.max(0, targetPosition.left) + 'px';
+}
+
+function positionValidator (pos) {
+  var parts = pos.split(' ');
+  if (parts.length !== 2) {
+    return false
+  }
+  if (!['top', 'center', 'bottom'].includes(parts[0])) {
+    console.error('Anchor/Self position must start with one of top/center/bottom');
+    return false
+  }
+  if (!['left', 'middle', 'right'].includes(parts[1])) {
+    console.error('Anchor/Self position must end with one of left/middle/right');
+    return false
+  }
+  return true
+}
+
+function offsetValidator (val) {
+  if (!val) { return true }
+  if (val.length !== 2) { return false }
+  if (typeof val[0] !== 'number' || typeof val[1] !== 'number') {
+    return false
+  }
+  return true
+}
+
+function parsePosition (pos) {
+  var parts = pos.split(' ');
+  return {vertical: parts[0], horizontal: parts[1]}
+}
+
+function debounce (fn, wait, immediate) {
+  if ( wait === void 0 ) wait = 250;
+
+  var timeout;
+
+  function debounced () {
+    var this$1 = this;
+    var args = [], len = arguments.length;
+    while ( len-- ) args[ len ] = arguments[ len ];
+
+    var later = function () {
+      timeout = null;
+      if (!immediate) {
+        fn.apply(this$1, args);
+      }
+    };
+
+    clearTimeout(timeout);
+    if (immediate && !timeout) {
+      fn.apply(this, args);
+    }
+    timeout = setTimeout(later, wait);
+  }
+
+  debounced.cancel = function () {
+    clearTimeout(timeout);
+  };
+
+  return debounced
+}
+
+function frameDebounce (fn) {
+  var wait = false;
+
+  return function () {
+    var this$1 = this;
+    var args = [], len = arguments.length;
+    while ( len-- ) args[ len ] = arguments[ len ];
+
+    if (wait) { return }
+
+    wait = true;
+    window.requestAnimationFrame(function () {
+      fn.apply(this$1, args);
+      wait = false;
+    });
+  }
+}
+
+function getScrollTarget (el) {
+  return el.closest('.scroll') || window
+}
+
+function getScrollHeight (el) {
+  return (el === window ? document.body : el).scrollHeight
+}
+
+function getScrollPosition (scrollTarget) {
+  if (scrollTarget === window) {
+    return window.pageYOffset || window.scrollY || document.body.scrollTop || 0
+  }
+  return scrollTarget.scrollTop
+}
+
+function animScrollTo (el, to, duration) {
+  if (duration <= 0) {
+    return
+  }
+
+  var pos = getScrollPosition(el);
+
+  window.requestAnimationFrame(function () {
+    setScroll(el, pos + (to - pos) / duration * 16);
+    if (el.scrollTop !== to) {
+      animScrollTo(el, to, duration - 16);
+    }
+  });
+}
+
+function setScroll (scrollTarget, offset$$1) {
+  if (scrollTarget === window) {
+    document.documentElement.scrollTop = offset$$1;
+    document.body.scrollTop = offset$$1;
+    return
+  }
+  scrollTarget.scrollTop = offset$$1;
+}
+
+function setScrollPosition (scrollTarget, offset$$1, duration) {
+  if (duration) {
+    animScrollTo(scrollTarget, offset$$1, duration);
+    return
+  }
+  setScroll(scrollTarget, offset$$1);
+}
+
+var size;
+function getScrollbarWidth () {
+  if (size !== undefined) {
+    return size
+  }
+
+  var
+    inner = document.createElement('p'),
+    outer = document.createElement('div');
+
+  css(inner, {
+    width: '100%',
+    height: '200px'
+  });
+  css(outer, {
+    position: 'absolute',
+    top: '0px',
+    left: '0px',
+    visibility: 'hidden',
+    width: '200px',
+    height: '150px',
+    overflow: 'hidden'
+  });
+
+  outer.appendChild(inner);
+
+  document.body.appendChild(outer);
+
+  var w1 = inner.offsetWidth;
+  outer.style.overflow = 'scroll';
+  var w2 = inner.offsetWidth;
+
+  if (w1 === w2) {
+    w2 = outer.clientWidth;
+  }
+
+  document.body.removeChild(outer);
+  size = w1 - w2;
+
+  return size
+}
+
+
+var scroll = Object.freeze({
+	getScrollTarget: getScrollTarget,
+	getScrollHeight: getScrollHeight,
+	getScrollPosition: getScrollPosition,
+	animScrollTo: animScrollTo,
+	setScrollPosition: setScrollPosition,
+	getScrollbarWidth: getScrollbarWidth
+});
+
+var QPopover = {
+  name: 'q-popover',
+  mixins: [ModelToggleMixin],
+  props: {
+    anchor: {
+      type: String,
+      default: 'bottom left',
+      validator: positionValidator
+    },
+    self: {
+      type: String,
+      default: 'top left',
+      validator: positionValidator
+    },
+    fit: Boolean,
+    maxHeight: String,
+    touchPosition: Boolean,
+    anchorClick: {
+      /*
+        for handling anchor outside of Popover
+        example: context menu component
+      */
+      type: Boolean,
+      default: true
+    },
+    offset: {
+      type: Array,
+      validator: offsetValidator
+    },
+    disable: Boolean
+  },
+  watch: {
+    $route: function $route () {
+      this.hide();
+    }
+  },
+  computed: {
+    transformCSS: function transformCSS () {
+      return getTransformProperties({selfOrigin: this.selfOrigin})
+    },
+    anchorOrigin: function anchorOrigin () {
+      return parsePosition(this.anchor)
+    },
+    selfOrigin: function selfOrigin () {
+      return parsePosition(this.self)
+    }
+  },
+  render: function render (h) {
+    return h('div', {
+      staticClass: 'q-popover animate-scale',
+      style: this.transformCSS,
+      on: {
+        click: function click (e) { e.stopPropagation(); }
+      }
+    }, this.$slots.default)
+  },
+  created: function created () {
+    var this$1 = this;
+
+    this.__updatePosition = frameDebounce(function () { this$1.reposition(); });
+  },
+  mounted: function mounted () {
+    var this$1 = this;
+
+    this.$nextTick(function () {
+      this$1.anchorEl = this$1.$el.parentNode;
+      this$1.anchorEl.removeChild(this$1.$el);
+      if (this$1.anchorEl.classList.contains('q-btn-inner')) {
+        this$1.anchorEl = this$1.anchorEl.parentNode;
+      }
+      if (this$1.anchorClick) {
+        this$1.anchorEl.classList.add('cursor-pointer');
+        this$1.anchorEl.addEventListener('click', this$1.toggle);
+      }
+    });
+    if (this.value) {
+      this.show();
+    }
+  },
+  beforeDestroy: function beforeDestroy () {
+    if (this.anchorClick && this.anchorEl) {
+      this.anchorEl.removeEventListener('click', this.toggle);
+    }
+  },
+  methods: {
+    __show: function __show (evt) {
+      var this$1 = this;
+
+      document.body.appendChild(this.$el);
+      EscapeKey.register(function () { this$1.hide(); });
+      this.scrollTarget = getScrollTarget(this.anchorEl);
+      this.scrollTarget.addEventListener('scroll', this.__updatePosition);
+      window.addEventListener('resize', this.__updatePosition);
+      this.reposition(evt);
+
+      clearTimeout(this.timer);
+      this.timer = setTimeout(function () {
+        document.body.addEventListener('click', this$1.__bodyHide, true);
+        document.body.addEventListener('touchstart', this$1.__bodyHide, true);
+        this$1.showPromise && this$1.showPromiseResolve();
+      }, 0);
+    },
+    __bodyHide: function __bodyHide (evt) {
+      if (
+        evt && evt.target &&
+        (this.$el.contains(evt.target) || (this.anchorClick && this.anchorEl.contains(evt.target)))
+      ) {
+        return
+      }
+
+      this.hide(evt);
+    },
+    __hide: function __hide (evt) {
+      clearTimeout(this.timer);
+
+      document.body.removeEventListener('click', this.__bodyHide, true);
+      document.body.removeEventListener('touchstart', this.__bodyHide, true);
+      this.scrollTarget.removeEventListener('scroll', this.__updatePosition);
+      window.removeEventListener('resize', this.__updatePosition);
+      EscapeKey.pop();
+
+      document.body.removeChild(this.$el);
+      this.hidePromise && this.hidePromiseResolve();
+    },
+    reposition: function reposition (event) {
+      var this$1 = this;
+
+      this.$nextTick(function () {
+        if (this$1.fit) {
+          this$1.$el.style.minWidth = width(this$1.anchorEl) + 'px';
+        }
+        var ref = this$1.anchorEl.getBoundingClientRect();
+        var top = ref.top;
+        var ref$1 = viewport();
+        var height$$1 = ref$1.height;
+        if (top < 0 || top > height$$1) {
+          return this$1.hide()
+        }
+        setPosition({
+          event: event,
+          el: this$1.$el,
+          offset: this$1.offset,
+          anchorEl: this$1.anchorEl,
+          anchorOrigin: this$1.anchorOrigin,
+          selfOrigin: this$1.selfOrigin,
+          maxHeight: this$1.maxHeight,
+          anchorClick: this$1.anchorClick,
+          touchPosition: this$1.touchPosition
+        });
+      });
+    }
+  }
+};
+
 var QBtnDropdown = {
   name: 'q-btn-dropdown',
   mixins: [BtnMixin],
@@ -3833,6 +3486,360 @@ var QBtnToggleGroup = {
         }
       }); }
     ))
+  }
+};
+
+var QAlert = {
+  name: 'q-alert',
+  props: {
+    type: {
+      type: String,
+      validator: function (v) { return ['positive', 'negative', 'warning', 'info'].includes(v); }
+    },
+    color: {
+      type: String,
+      default: 'negative'
+    },
+    textColor: String,
+    message: String,
+    detail: String,
+    icon: String,
+    avatar: String,
+    actions: Array
+  },
+  computed: {
+    computedIcon: function computedIcon () {
+      return this.icon
+        ? this.icon
+        : typeIcon[this.type || this.color]
+    },
+    classes: function classes () {
+      return ("bg-" + (this.type || this.color) + " text-" + (this.textColor || 'white'))
+    }
+  },
+  render: function render (h) {
+    var side = [];
+
+    if (this.avatar) {
+      side.push(
+        h('img', {
+          staticClass: 'avatar',
+          domProps: { src: this.avatar }
+        })
+      );
+    }
+    else if (this.icon || this.type) {
+      side.push(
+        h(QIcon, {
+          props: { name: this.computedIcon }
+        })
+      );
+    }
+
+    return h('div', [
+      h('div', {
+        staticClass: 'q-alert row no-wrap shadow-2',
+        'class': this.classes
+      }, [
+        side.length
+          ? h('div', { staticClass: 'q-alert-side row col-auto flex-center' }, side)
+          : null,
+        h('div', {
+          staticClass: 'q-alert-content col self-center'
+        }, [
+          h('div', this.$slots.default || this.message),
+          this.detail ? h('div', { staticClass: 'q-alert-detail' }, [ this.detail ]) : null
+        ]),
+        this.actions && this.actions.length
+          ? h('div', {
+            staticClass: 'q-alert-actions col-auto xs-gutter flex-center'
+          },
+          this.actions.map(function (action) { return h('div', [
+              h(QBtn, {
+                props: {
+                  flat: true,
+                  compact: true
+                },
+                on: {
+                  click: function () { return action.handler(); }
+                }
+              }, [ action.label ])
+            ]); }
+          ))
+          : null
+      ])
+    ])
+  }
+};
+
+var filter = function (terms, ref) {
+  var field = ref.field;
+  var list = ref.list;
+
+  var token = terms.toLowerCase();
+  return list.filter(function (item) { return ('' + item[field]).toLowerCase().startsWith(token); })
+};
+
+function s4 () {
+  return Math.floor((1 + Math.random()) * 0x10000)
+    .toString(16)
+    .substring(1)
+}
+
+var uid = function () {
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+    s4() + '-' + s4() + s4() + s4()
+};
+
+function prevent (e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+var QAutocomplete = {
+  name: 'q-autocomplete',
+  props: {
+    minCharacters: {
+      type: Number,
+      default: 1
+    },
+    maxResults: {
+      type: Number,
+      default: 6
+    },
+    debounce: {
+      type: Number,
+      default: 500
+    },
+    filter: {
+      type: Function,
+      default: filter
+    },
+    staticData: Object,
+    separator: Boolean
+  },
+  inject: {
+    __input: {
+      default: function default$1 () {
+        console.error('QAutocomplete needs to be child of QInput or QSearch');
+      }
+    },
+    __inputDebounce: { default: null }
+  },
+  data: function data () {
+    return {
+      searchId: '',
+      results: [],
+      selectedIndex: -1,
+      width: 0,
+      enterKey: false,
+      timer: null
+    }
+  },
+  watch: {
+    '__input.val': function _input_val () {
+      if (this.enterKey) {
+        this.enterKey = false;
+      }
+      else {
+        this.__delayTrigger();
+      }
+    }
+  },
+  computed: {
+    computedResults: function computedResults () {
+      return this.maxResults && this.results.length > 0
+        ? this.results.slice(0, this.maxResults)
+        : []
+    },
+    computedWidth: function computedWidth () {
+      return {minWidth: this.width}
+    },
+    searching: function searching () {
+      return this.searchId.length > 0
+    }
+  },
+  methods: {
+    trigger: function trigger () {
+      var this$1 = this;
+
+      if (!this.__input.hasFocus()) {
+        return
+      }
+      var terms = this.__input.val;
+      this.width = width(this.inputEl) + 'px';
+      var searchId = uid();
+      this.searchId = searchId;
+
+      if (terms.length < this.minCharacters) {
+        this.searchId = '';
+        this.__clearSearch();
+        this.hide();
+        return
+      }
+
+      if (this.staticData) {
+        this.searchId = '';
+        this.results = this.filter(terms, this.staticData);
+        if (this.$q.platform.is.desktop) {
+          this.selectedIndex = 0;
+        }
+        this.$refs.popover.show();
+        return
+      }
+
+      this.hide();
+      this.__input.loading = true;
+      this.$emit('search', terms, function (results) {
+        if (this$1.searchId !== searchId) {
+          return
+        }
+
+        this$1.__clearSearch();
+
+        if (!this$1.results || this$1.results === results) {
+          return
+        }
+
+        if (Array.isArray(results) && results.length > 0) {
+          this$1.results = results;
+          if (this$1.$refs && this$1.$refs.popover) {
+            if (this$1.$q.platform.is.desktop) {
+              this$1.selectedIndex = 0;
+            }
+            this$1.$refs.popover.show();
+          }
+          return
+        }
+
+        this$1.hide();
+      });
+    },
+    hide: function hide () {
+      this.results = [];
+      this.selectedIndex = -1;
+      return this.$refs.popover.hide()
+    },
+    __clearSearch: function __clearSearch () {
+      clearTimeout(this.timer);
+      this.__input.loading = false;
+      this.searchId = '';
+    },
+    setValue: function setValue (result) {
+      var suffix = this.__inputDebounce ? 'Debounce' : '';
+      this[("__input" + suffix)].set(this.staticData ? result[this.staticData.field] : result.value);
+
+      this.$emit('selected', result);
+      this.__clearSearch();
+      this.hide();
+    },
+    move: function move (offset$$1) {
+      this.selectedIndex = normalizeToInterval(
+        this.selectedIndex + offset$$1,
+        0,
+        this.computedResults.length - 1
+      );
+    },
+    setCurrentSelection: function setCurrentSelection () {
+      this.enterKey = true;
+      if (this.selectedIndex >= 0) {
+        this.setValue(this.results[this.selectedIndex]);
+      }
+    },
+    __delayTrigger: function __delayTrigger () {
+      this.__clearSearch();
+      if (!this.__input.hasFocus()) {
+        return
+      }
+      if (this.staticData) {
+        this.trigger();
+        return
+      }
+      this.timer = setTimeout(this.trigger, this.debounce);
+    },
+    __handleKeypress: function __handleKeypress (e) {
+      switch (e.keyCode || e.which) {
+        case 38: // up
+          this.__moveCursor(-1, e);
+          break
+        case 40: // down
+          this.__moveCursor(1, e);
+          break
+        case 13: // enter
+          this.setCurrentSelection();
+          prevent(e);
+          break
+        case 27: // escape
+          this.__clearSearch();
+          break
+      }
+    },
+    __moveCursor: function __moveCursor (offset$$1, e) {
+      prevent(e);
+
+      if (!this.$refs.popover.showing) {
+        this.trigger();
+      }
+      else {
+        this.move(offset$$1);
+      }
+    }
+  },
+  mounted: function mounted () {
+    var this$1 = this;
+
+    this.__input.register();
+    if (this.__inputDebounce) {
+      this.__inputDebounce.setChildDebounce(true);
+    }
+    this.$nextTick(function () {
+      this$1.inputEl = this$1.__input.getEl();
+      this$1.inputEl.addEventListener('keyup', this$1.__handleKeypress);
+    });
+  },
+  beforeDestroy: function beforeDestroy () {
+    this.__clearSearch();
+    this.__input.unregister();
+    if (this.__inputDebounce) {
+      this.__inputDebounce.setChildDebounce(false);
+    }
+    if (this.inputEl) {
+      this.inputEl.removeEventListener('keydown', this.__handleKeypress);
+      this.hide();
+    }
+  },
+  render: function render (h) {
+    var this$1 = this;
+
+    return h(QPopover, {
+      ref: 'popover',
+      props: {
+        fit: true,
+        offset: [0, 10],
+        anchorClick: false
+      },
+      on: {
+        show: function () { return this$1.$emit('show'); },
+        hide: function () { return this$1.$emit('hide'); }
+      }
+    }, [
+      h(QList, {
+        props: {
+          noBorder: true,
+          link: true,
+          separator: this.separator
+        },
+        style: this.computedWidth
+      },
+      this.computedResults.map(function (result, index) { return h(QItemWrapper, {
+        key: result.id || JSON.stringify(result),
+        'class': { active: this$1.selectedIndex === index },
+        props: { cfg: result },
+        on: {
+          click: function () { this$1.setValue(result); }
+        }
+      }); }))
+    ])
   }
 };
 
