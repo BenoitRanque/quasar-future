@@ -897,6 +897,33 @@ body.desktop ul.breadcrumb a:hover:after {
 .q-collapsible.router-link-active > .q-item {
   background: rgba(189,189,189,0.4);
 }
+.q-collapsible {
+  -webkit-transition: padding 0.5s;
+  transition: padding 0.5s;
+}
+.q-collapsible-closed {
+  padding: 0 15px;
+}
+.q-collapsible-closed .q-collapsible-inner {
+  border: 1px solid #e0e0e0;
+}
+.q-collapsible-closed + .q-collapsible-closed .q-collapsible-inner {
+  border-top: 0;
+}
+.q-collapsible-opened {
+  padding: 15px 0;
+}
+.q-collapsible-opened .q-collapsible-inner {
+  -webkit-box-shadow: 0 1px 5px rgba(0,0,0,0.2), 0 2px 2px rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12);
+          box-shadow: 0 1px 5px rgba(0,0,0,0.2), 0 2px 2px rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12);
+}
+.q-collapsible-opened + .q-collapsible-opened,
+.q-collapsible-opened:first-child {
+  padding-top: 0;
+}
+.q-collapsible-opened:last-child {
+  padding-bottom: 0;
+}
 .q-datetime-input {
   min-width: 70px;
 }

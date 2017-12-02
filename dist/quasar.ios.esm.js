@@ -5544,6 +5544,7 @@ var QCollapsible = {
   },
   props: {
     disable: Boolean,
+    popup: Boolean,
     indent: Boolean,
     group: String,
     iconToggle: Boolean,
@@ -5597,6 +5598,15 @@ var QCollapsible = {
     },
     hasRipple: function hasRipple () {
       return "ios" === 'mat' && !this.noRipple
+    },
+    classes: function classes () {
+      return {
+        'q-collapsible-opened': this.popup && this.showing,
+        'q-collapsible-closed': this.popup && !this.showing,
+        'q-item-separator': this.separator,
+        'q-item-inset-separator': this.insetSeparator,
+        disabled: this.disable
+      }
     }
   },
   watch: {
@@ -5670,28 +5680,28 @@ var QCollapsible = {
   render: function render (h) {
     return h('div', {
       staticClass: 'q-collapsible q-item-division relative-position',
-      'class': {
-        'q-item-separator': this.separator,
-        'q-item-inset-separator': this.insetSeparator,
-        disabled: this.disable
-      }
+      'class': this.classes
     }, [
-      this.$slots.header
-        ? h(QItem, this.__getItemProps(), [
-          this.$slots.header,
-          h(QItemSide, { props: { right: true }, staticClass: 'relative-position' }, this.__getToggleSide(h))
-        ])
-        : h(QItemWrapper, this.__getItemProps(true), this.__getToggleSide(h, true)),
+      h('div', {
+        staticClass: 'q-collapsible-inner'
+      }, [
+        this.$slots.header
+          ? h(QItem, this.__getItemProps(), [
+            this.$slots.header,
+            h(QItemSide, { props: { right: true }, staticClass: 'relative-position' }, this.__getToggleSide(h))
+          ])
+          : h(QItemWrapper, this.__getItemProps(true), this.__getToggleSide(h, true)),
 
-      h(QSlideTransition, [
-        h('div', {
-          directives: [{ name: 'show', value: this.showing }]
-        }, [
+        h(QSlideTransition, [
           h('div', {
-            staticClass: 'q-collapsible-sub-item relative-position',
-            'class': { indent: this.indent }
+            directives: [{ name: 'show', value: this.showing }]
           }, [
-            this.$slots.default
+            h('div', {
+              staticClass: 'q-collapsible-sub-item relative-position',
+              'class': { indent: this.indent }
+            }, [
+              this.$slots.default
+            ])
           ])
         ])
       ])
