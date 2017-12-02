@@ -1530,21 +1530,19 @@ function push (child, h, name, slot, replace, conf) {
     child.push(h(name, defaultProps, slot));
     return
   }
-  var props, v = false;
-  if (!slot) {
-    for (var p in conf) {
-      if (conf.hasOwnProperty(p)) {
-        v = conf[p];
-        if (v !== void 0 && v !== true) {
-          props = true;
-          break
-        }
+
+  var v = false;
+  for (var p in conf) {
+    if (conf.hasOwnProperty(p)) {
+      v = conf[p];
+      if (v !== void 0 && v !== true) {
+        child.push(h(name, { props: conf }));
+        break
       }
     }
   }
-  if (props || slot) {
-    child.push(h(name, props ? {props: conf} : defaultProps, slot));
-  }
+
+  slot && child.push(h(name, defaultProps, slot));
 }
 
 var QItemWrapper = {
@@ -5493,16 +5491,11 @@ var QSlideTransition = {
 
 var eventName = 'q:collapsible:close';
 
-var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{staticClass:"q-collapsible q-item-division relative-position",class:[ ("q-collapsible-" + (_vm.showing ? 'opened' : 'closed')), { 'q-item-separator': _vm.separator, 'q-item-inset-separator': _vm.insetSeparator } ]},[_c('q-item-wrapper',{directives:[{name:"ripple",rawName:"v-ripple.mat",value:(!_vm.iconToggle && !_vm.disable),expression:"!iconToggle && !disable",modifiers:{"mat":true}}],class:{disabled: _vm.disable},attrs:{"cfg":_vm.cfg},on:{"click":_vm.__toggleItem}},[_c('div',{directives:[{name:"ripple",rawName:"v-ripple.mat.stop",value:(_vm.iconToggle),expression:"iconToggle",modifiers:{"mat":true,"stop":true}}],staticClass:"cursor-pointer relative-position inline-block",attrs:{"slot":"right"},on:{"click":function($event){$event.stopPropagation();_vm.toggle($event);}},slot:"right"},[_c('q-item-tile',{staticClass:"transition-generic",class:{'rotate-180': _vm.showing, invisible: _vm.disable},attrs:{"icon":"keyboard_arrow_down"}})],1)]),_vm._v(" "),_c('q-slide-transition',[_c('div',{directives:[{name:"show",rawName:"v-show",value:(_vm.showing),expression:"showing"}]},[_c('div',{staticClass:"q-collapsible-sub-item relative-position",class:{indent: _vm.indent}},[_vm._t("default")],2)])])],1)},staticRenderFns: [],
+var QCollapsible = {
   name: 'q-collapsible',
   mixins: [ModelToggleMixin],
   modelToggle: {
     history: false
-  },
-  components: {
-    QItemWrapper: QItemWrapper,
-    QItemTile: QItemTile,
-    QSlideTransition: QSlideTransition
   },
   directives: {
     Ripple: Ripple
@@ -5512,33 +5505,33 @@ var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;va
     indent: Boolean,
     group: String,
     iconToggle: Boolean,
+    separator: Boolean,
+    insetSeparator: Boolean,
+    noRipple: Boolean,
 
     dense: Boolean,
     sparse: Boolean,
     multiline: Boolean,
-    separator: Boolean,
-    insetSeparator: Boolean,
 
     icon: String,
+    rightIcon: String,
     image: String,
+    rightImage: String,
     avatar: String,
+    rightAvatar: String,
     letter: String,
+    rightLetter: String,
     label: String,
     sublabel: String,
     labelLines: [String, Number],
     sublabelLines: [String, Number]
   },
-  watch: {
-    showing: function showing (val) {
-      if (val && this.group) {
-        this.$root.$emit(eventName, this);
-      }
-    }
-  },
   computed: {
     cfg: function cfg () {
       return {
         link: !this.iconToggle,
+        headerStyle: [Array, String, Object],
+        headerClass: [Array, String, Object],
 
         dark: this.dark,
         dense: this.dense,
@@ -5546,14 +5539,28 @@ var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;va
         multiline: this.multiline,
 
         icon: this.icon,
+        rightIcon: this.rightIcon,
         image: this.image,
+        rightImage: this.rightImage,
         avatar: this.avatar,
+        rightAvatar: this.rightAvatar,
         letter: this.letter,
+        rightLetter: this.rightLetter,
 
         label: this.label,
         sublabel: this.sublabel,
         labelLines: this.labelLines,
         sublabelLines: this.sublabelLines
+      }
+    },
+    hasRipple: function hasRipple () {
+      return "mat" === 'mat' && !this.noRipple
+    }
+  },
+  watch: {
+    showing: function showing (val) {
+      if (val && this.group) {
+        this.$root.$emit(eventName, this);
       }
     }
   },
@@ -5563,9 +5570,49 @@ var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;va
         this.toggle();
       }
     },
+    __toggleIcon: function __toggleIcon (e) {
+      if (this.iconToggle) {
+        e && e.stopPropagation();
+        this.toggle();
+      }
+    },
     __eventHandler: function __eventHandler (comp) {
       if (this.group && this !== comp && comp.group === this.group) {
         this.hide();
+      }
+    },
+    __getToggleSide: function __getToggleSide (h, slot) {
+      return [
+        h(QItemTile, {
+          slot: slot ? 'right' : undefined,
+          staticClass: 'cursor-pointer transition-generic',
+          'class': {
+            'rotate-180': this.showing,
+            invisible: this.disable
+          },
+          on: {
+            click: this.__toggleIcon
+          },
+          props: { icon: 'keyboard_arrow_down' },
+          directives: this.iconToggle && this.hasRipple
+            ? [{ name: 'ripple', value: !this.disable }]
+            : []
+        })
+      ]
+    },
+    __getItemProps: function __getItemProps (wrapper) {
+      return {
+        props: wrapper
+          ? { cfg: this.cfg }
+          : { link: !this.iconToggle },
+        style: this.headerStyle,
+        'class': this.headerClass,
+        on: {
+          click: this.__toggleItem
+        },
+        directives: this.hasRipple && !this.iconToggle
+          ? [{ name: 'ripple', value: !this.disable }]
+          : []
       }
     }
   },
@@ -5577,6 +5624,36 @@ var QCollapsible = {render: function(){var _vm=this;var _h=_vm.$createElement;va
   },
   beforeDestroy: function beforeDestroy () {
     this.$root.$off(eventName, this.__eventHandler);
+  },
+  render: function render (h) {
+    return h('div', {
+      staticClass: 'q-collapsible q-item-division relative-position',
+      'class': {
+        'q-item-separator': this.separator,
+        'q-item-inset-separator': this.insetSeparator,
+        disabled: this.disable
+      }
+    }, [
+      this.$slots.header
+        ? h(QItem, this.__getItemProps(), [
+          this.$slots.header,
+          h(QItemSide, { props: { right: true } }, this.__getToggleSide(h))
+        ])
+        : h(QItemWrapper, this.__getItemProps(true), this.__getToggleSide(h, true)),
+
+      h(QSlideTransition, [
+        h('div', {
+          directives: [{ name: 'show', value: this.showing }]
+        }, [
+          h('div', {
+            staticClass: 'q-collapsible-sub-item relative-position',
+            'class': { indent: this.indent }
+          }, [
+            this.$slots.default
+          ])
+        ])
+      ])
+    ])
   }
 };
 
